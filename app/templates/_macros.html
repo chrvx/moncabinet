@@ -10,7 +10,7 @@
 
 {% macro libelle_selection(field) %}
     {%- for valeur, texte in field.choices -%}
-        {%- if valeur == (field.data or "") -%}{{ texte }}{%- endif -%}
+        {%- if valeur and valeur == (field.data or "") -%}{{ texte }}{%- endif -%}
     {%- endfor -%}
 {% endmacro %}
 

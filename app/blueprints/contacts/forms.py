@@ -214,10 +214,3 @@ class NouvelOfficeNotarialAnnuaireForm(FlaskForm):
     code_postal = HiddenField(validators=[Optional()])
     commune = HiddenField(validators=[Optional()])
     soumettre = SubmitField("Créer le contact")
-
-
-class NouveauBarreauForm(FlaskForm):
-    libelle = StringField(
-        "Nouveau barreau", validators=[DataRequired(message="Ce champ est requis.")]
-    )
-    soumettre = SubmitField("Ajouter")

@@ -5,21 +5,35 @@
 <p><a href="{{ url_for('contacts.recherche') }}">&larr; Retour à la recherche</a></p>
 <h1>{{ titre }}</h1>
 
+<div class="disposition-fiche">
+<div class="colonne">
+
+<div class="carte">
 <h2>Informations</h2>
 {% if contact.type_contact == "personne_physique" %}
     {{ info(formulaire_modif.civilite_id.label.text, libelle_selection(formulaire_modif.civilite_id)) }}
     {{ info("Nom", personne.nom) }}
     {{ info("Prénom", personne.prenom) }}
-    {{ info(formulaire_modif.prenoms_secondaires.label.text, personne.prenoms_secondaires) }}
-    {{ info(formulaire_modif.nom_usage.label.text, personne.nom_usage) }}
+    {% if not est_avocat %}
+        {{ info(formulaire_modif.prenoms_secondaires.label.text, personne.prenoms_secondaires) }}
+        {{ info(formulaire_modif.nom_usage.label.text, personne.nom_usage) }}
+    {% endif %}
     {{ info(formulaire_modif.genre.label.text, libelle_selection(formulaire_modif.genre)) }}
-    {{ info(formulaire_modif.date_naissance.label.text, personne.date_naissance) }}
-    {{ info(formulaire_modif.ville_naissance.label.text, personne.ville_naissance) }}
-    {{ info(formulaire_modif.departement_naissance_id.label.text, libelle_selection(formulaire_modif.departement_naissance_id)) }}
-    {{ info(formulaire_modif.pays_naissance_id.label.text, libelle_selection(formulaire_modif.pays_naissance_id)) }}
-    {{ info(formulaire_modif.nationalite_id.label.text, libelle_selection(formulaire_modif.nationalite_id)) }}
-    {{ info(formulaire_modif.profession.label.text, personne.profession) }}
-    {{ info(formulaire_modif.siren.label.text, personne.siren) }}
+    {% if est_avocat %}
+        {{ info("Barreau", libelle_selection(formulaire_avocat.barreau_id)) }}
+        {% if cabinet_avocat %}
+        <p><strong>Cabinet :</strong> <a href="{{ url_for('contacts.fiche', contact_id=cabinet_avocat.contact_id) }}">{{ cabinet_avocat.raison_sociale }}</a></p>
+        {% endif %}
+    {% endif %}
+    {% if not est_avocat %}
+        {{ info(formulaire_modif.date_naissance.label.text, personne.date_naissance) }}
+        {{ info(formulaire_modif.ville_naissance.label.text, personne.ville_naissance) }}
+        {{ info(formulaire_modif.departement_naissance_id.label.text, libelle_selection(formulaire_modif.departement_naissance_id)) }}
+        {{ info(formulaire_modif.pays_naissance_id.label.text, libelle_selection(formulaire_modif.pays_naissance_id)) }}
+        {{ info(formulaire_modif.nationalite_id.label.text, libelle_selection(formulaire_modif.nationalite_id)) }}
+        {{ info(formulaire_modif.profession.label.text, personne.profession) }}
+        {{ info(formulaire_modif.siren.label.text, personne.siren) }}
+    {% endif %}
 {% else %}
     {{ info(formulaire_modif.raison_sociale.label.text, personne.raison_sociale) }}
     {{ info(formulaire_modif.forme.label.text, personne.forme) }}
@@ -43,16 +57,20 @@
         </p>
         <p>{{ formulaire_modif.nom.label }}<br>{{ formulaire_modif.nom(size=32) }}</p>
         <p>{{ formulaire_modif.prenom.label }}<br>{{ formulaire_modif.prenom(size=32) }}</p>
-        <p>{{ formulaire_modif.prenoms_secondaires.label }}<br>{{ formulaire_modif.prenoms_secondaires(size=32) }}</p>
-        <p>{{ formulaire_modif.nom_usage.label }}<br>{{ formulaire_modif.nom_usage(size=32) }}</p>
+        {% if not est_avocat %}
+            <p>{{ formulaire_modif.prenoms_secondaires.label }}<br>{{ formulaire_modif.prenoms_secondaires(size=32) }}</p>
+            <p>{{ formulaire_modif.nom_usage.label }}<br>{{ formulaire_modif.nom_usage(size=32) }}</p>
+        {% endif %}
         <p>{{ formulaire_modif.genre.label }} {{ formulaire_modif.genre() }}</p>
-        <p>{{ formulaire_modif.date_naissance.label }} {{ formulaire_modif.date_naissance() }}</p>
-        <p>{{ formulaire_modif.ville_naissance.label }}<br>{{ formulaire_modif.ville_naissance(size=32) }}</p>
-        <p>{{ formulaire_modif.departement_naissance_id.label }} {{ formulaire_modif.departement_naissance_id() }}</p>
-        <p>{{ formulaire_modif.pays_naissance_id.label }} {{ formulaire_modif.pays_naissance_id() }}</p>
-        <p>{{ formulaire_modif.nationalite_id.label }} {{ formulaire_modif.nationalite_id() }}</p>
-        <p>{{ formulaire_modif.profession.label }}<br>{{ formulaire_modif.profession(size=32) }}</p>
-        <p>{{ formulaire_modif.siren.label }}<br>{{ formulaire_modif.siren(size=20) }}</p>
+        {% if not est_avocat %}
+            <p>{{ formulaire_modif.date_naissance.label }} {{ formulaire_modif.date_naissance() }}</p>
+            <p>{{ formulaire_modif.ville_naissance.label }}<br>{{ formulaire_modif.ville_naissance(size=32) }}</p>
+            <p>{{ formulaire_modif.departement_naissance_id.label }} {{ formulaire_modif.departement_naissance_id() }}</p>
+            <p>{{ formulaire_modif.pays_naissance_id.label }} {{ formulaire_modif.pays_naissance_id() }}</p>
+            <p>{{ formulaire_modif.nationalite_id.label }} {{ formulaire_modif.nationalite_id() }}</p>
+            <p>{{ formulaire_modif.profession.label }}<br>{{ formulaire_modif.profession(size=32) }}</p>
+            <p>{{ formulaire_modif.siren.label }}<br>{{ formulaire_modif.siren(size=20) }}</p>
+        {% endif %}
     {% else %}
         <p>{{ formulaire_modif.raison_sociale.label }}<br>{{ formulaire_modif.raison_sociale(size=40) }}</p>
         <p>{{ formulaire_modif.forme.label }}<br>{{ formulaire_modif.forme(size=20) }}</p>
@@ -61,8 +79,10 @@
     {{ formulaire_modif.soumettre() }}
 </form>
 </details>
+</div>
 
 {% if contact.type_contact == "personne_physique" %}
+<div class="carte">
 <h2>Qualification professionnelle</h2>
 <p class="aide">
     Distinct des rôles joués dans un dossier (ex: avocat adverse) : ceci
@@ -74,12 +94,7 @@
 
 {% if profession_actuelle in (None, "avocat") %}
 <h3>Avocat</h3>
-{% if avocat %}
-    {{ info("Barreau", libelle_selection(formulaire_avocat.barreau_id)) }}
-    {% if cabinet_avocat %}
-    <p><strong>Cabinet :</strong> <a href="{{ url_for('contacts.fiche', contact_id=cabinet_avocat.contact_id) }}">{{ cabinet_avocat.raison_sociale }}</a></p>
-    {% endif %}
-{% else %}
+{% if not avocat %}
     <p>Aucune qualification avocat.</p>
 {% endif %}
 <details>
@@ -162,9 +177,11 @@
 </form>
 {% endif %}
 {% endif %}
+</div>
 {% endif %}
 
 {% if contact.type_contact == "personne_morale" %}
+<div class="carte">
 <h2>Avocats rattachés</h2>
 {% if avocats_du_cabinet %}
     <ul>
@@ -175,8 +192,13 @@
 {% else %}
     <p>Aucun avocat rattaché à ce cabinet.</p>
 {% endif %}
+</div>
 {% endif %}
 
+</div>
+<div class="colonne">
+
+<div class="carte">
 <h2>Adresses</h2>
 {% if adresses %}
     <ul>
@@ -189,11 +211,11 @@
             {% if adresse.numero_voie %}{{ adresse.numero_voie }} {% endif %}{{ adresse.libelle_voie }}<br>
             {% if adresse.code_cedex %}{{ adresse.code_cedex }} {{ adresse.commune }} CEDEX {{ adresse.numero_cedex }}
             {% else %}{{ adresse.code_postal }} {{ adresse.commune }}{% endif %}
-            <form method="post" action="{{ url_for('contacts.terminer_adresse', contact_id=contact.id, contact_adresse_id=lien.id) }}" style="display:inline">
+            <details>
+            <summary>Actions</summary>
+            <form method="post" action="{{ url_for('contacts.terminer_adresse', contact_id=contact.id, contact_adresse_id=lien.id) }}">
                 <button type="submit">Clôturer (déménagement)</button>
             </form>
-            <details style="display:inline-block">
-            <summary>Corriger</summary>
             <p class="aide">
                 Corrige une faute de frappe sur cette adresse, sans créer de
                 changement dans l'historique du contact.
@@ -289,7 +311,9 @@
     {% endif %}
 {% endif %}
 </details>
+</div>
 
+<div class="carte">
 <h2>Téléphones</h2>
 {% if telephones %}
     <ul>
@@ -301,11 +325,11 @@
                     &#9888; l'annuaire national indique : {{ lien.valeur_annuaire_divergente }}
                 </span>
             {% endif %}
-            <form method="post" action="{{ url_for('contacts.terminer_telephone', contact_id=contact.id, contact_telephone_id=lien.id) }}" style="display:inline">
+            <details>
+            <summary>Actions</summary>
+            <form method="post" action="{{ url_for('contacts.terminer_telephone', contact_id=contact.id, contact_telephone_id=lien.id) }}">
                 <button type="submit">Clôturer</button>
             </form>
-            <details style="display:inline-block">
-            <summary>Corriger</summary>
             <p class="aide">
                 Corrige une faute de frappe sur ce numéro, sans créer de
                 changement dans l'historique du contact.
@@ -314,7 +338,7 @@
                     la correction s'appliquera aussi à eux.
                 {% endif %}
             </p>
-            <form method="post" action="{{ url_for('contacts.corriger_telephone', contact_id=contact.id, contact_telephone_id=lien.id) }}" style="display:inline">
+            <form method="post" action="{{ url_for('contacts.corriger_telephone', contact_id=contact.id, contact_telephone_id=lien.id) }}">
                 {{ formulaire_correction.hidden_tag() }}
                 {{ formulaire_correction.numero(size=20) }}
                 {{ formulaire_correction.soumettre() }}
@@ -334,7 +358,9 @@
     {{ formulaire_telephone.soumettre() }}
 </form>
 </details>
+</div>
 
+<div class="carte">
 <h2>Emails</h2>
 {% if emails %}
     <ul>
@@ -346,11 +372,11 @@
                     &#9888; l'annuaire national indique : {{ lien.valeur_annuaire_divergente }}
                 </span>
             {% endif %}
-            <form method="post" action="{{ url_for('contacts.terminer_email', contact_id=contact.id, contact_email_id=lien.id) }}" style="display:inline">
+            <details>
+            <summary>Actions</summary>
+            <form method="post" action="{{ url_for('contacts.terminer_email', contact_id=contact.id, contact_email_id=lien.id) }}">
                 <button type="submit">Clôturer</button>
             </form>
-            <details style="display:inline-block">
-            <summary>Corriger</summary>
             <p class="aide">
                 Corrige une faute de frappe sur cet email, sans créer de
                 changement dans l'historique du contact.
@@ -359,7 +385,7 @@
                     la correction s'appliquera aussi à eux.
                 {% endif %}
             </p>
-            <form method="post" action="{{ url_for('contacts.corriger_email', contact_id=contact.id, contact_email_id=lien.id) }}" style="display:inline">
+            <form method="post" action="{{ url_for('contacts.corriger_email', contact_id=contact.id, contact_email_id=lien.id) }}">
                 {{ formulaire_correction.hidden_tag() }}
                 {{ formulaire_correction.adresse_email(size=32) }}
                 {{ formulaire_correction.soumettre() }}
@@ -379,7 +405,9 @@
     {{ formulaire_email.soumettre() }}
 </form>
 </details>
+</div>
 
+<div class="carte">
 <h2>Dossiers</h2>
 {% if dossiers_du_contact %}
     <ul>
@@ -400,6 +428,10 @@
     {{ formulaire_nouveau_dossier.contact_id() }}
     {{ formulaire_nouveau_dossier.soumettre() }}
 </form>
+</div>
+
+</div>
+</div>
 
 <script src="{{ url_for('static', filename='js/adresse.js') }}"></script>
 <script src="{{ url_for('static', filename='js/recherche_contact.js') }}"></script>

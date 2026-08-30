@@ -11,7 +11,6 @@ from app.blueprints.contacts.forms import (
     CorrigerTelephoneForm,
     ModifierPersonneMoraleForm,
     ModifierPersonnePhysiqueForm,
-    NouveauBarreauForm,
     NouvelAvocatAnnuaireForm,
     NouvelOfficeNotarialAnnuaireForm,
     NouvellePersonneMoraleForm,
@@ -162,14 +161,15 @@ def api_suggestions():
 def api_annuaire_avocats():
     """Endpoint JSON de recherche ponctuelle dans l'Annuaire national des
     avocats (data.gouv.fr), pour retrouver un confrère absent de la base
-    locale — voir app/services/annuaire_avocats.py. Le CSV national est mis
-    en cache en mémoire (telecharger_csv_avec_cache) : la première
-    recherche de la journée est un peu plus lente, les suivantes non."""
+    locale — voir app/services/annuaire_avocats.py. Le CSV national est
+    conservé sur disque et seulement retéléchargé quand une nouvelle
+    version est publiée (telecharger_csv) : une recherche isolée reste
+    donc rapide même après plusieurs semaines sans usage de cette page."""
     nom = request.args.get("nom", "").strip()
     prenom = request.args.get("prenom", "").strip() or None
     if len(nom) < 2:
         return jsonify([])
-    avocats = annuaire_avocats.telecharger_csv_avec_cache()
+    avocats = annuaire_avocats.telecharger_csv()
     resultats = annuaire_avocats.rechercher(avocats, nom, prenom)[:20]
     return jsonify([
         {
@@ -246,7 +246,7 @@ def nouveau_avocat_annuaire():
         return redirect(url_for("contacts.nouveau_avocat_annuaire_recherche"))
 
     code_cnbf = formulaire.code_cnbf.data.strip()
-    avocats = annuaire_avocats.telecharger_csv_avec_cache()
+    avocats = annuaire_avocats.telecharger_csv()
     avocat_annuaire = next((a for a in avocats if a.code_cnbf == code_cnbf), None)
     if avocat_annuaire is None:
         flash(
@@ -928,39 +928,3 @@ def supprimer_qualification_commissaire_justice(contact_id):
     qualifications.supprimer_commissaire_justice(contact_id)
     flash("Qualification commissaire de justice retirée.", "succes")
     return redirect(url_for("contacts.fiche", contact_id=contact_id))
-
-
-# --- Administration des barreaux (réservé avocat / collaborateur) ----------
-
-
-@bp.route("/barreaux")
-@login_required
-@role_requis("avocat", "collaborateur")
-def liste_barreaux():
-    return render_template(
-        "contacts/barreaux.html",
-        barreaux=reference.lister_barreaux(actifs_seulement=False),
-        formulaire=NouveauBarreauForm(),
-    )
-
-
-@bp.route("/barreaux", methods=["POST"])
-@login_required
-@role_requis("avocat", "collaborateur")
-def creer_barreau():
-    formulaire = NouveauBarreauForm()
-    if formulaire.validate_on_submit():
-        try:
-            reference.creer_barreau(formulaire.libelle.data)
-            flash("Barreau ajouté.", "succes")
-        except UniqueViolation:
-            flash("Ce barreau existe déjà.", "erreur")
-    return redirect(url_for("contacts.liste_barreaux"))
-
-
-@bp.route("/barreaux/<int:barreau_id>/basculer", methods=["POST"])
-@login_required
-@role_requis("avocat", "collaborateur")
-def basculer_barreau(barreau_id):
-    reference.basculer_actif_barreau(barreau_id)
-    return redirect(url_for("contacts.liste_barreaux"))

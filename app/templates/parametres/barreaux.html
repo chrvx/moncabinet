@@ -8,7 +8,7 @@
 {% for b in barreaux %}
     <li{% if not b.actif %} style="opacity:0.6"{% endif %}>
         {{ b.libelle }}{% if not b.actif %} (inactif){% endif %}
-        <form method="post" action="{{ url_for('contacts.basculer_barreau', barreau_id=b.id) }}" style="display:inline">
+        <form method="post" action="{{ url_for('parametres.basculer_barreau', barreau_id=b.id) }}" style="display:inline">
             <button type="submit">{{ "Réactiver" if not b.actif else "Désactiver" }}</button>
         </form>
     </li>
@@ -16,7 +16,7 @@
 </ul>
 
 <h2>Nouveau barreau</h2>
-<form method="post" action="{{ url_for('contacts.creer_barreau') }}">
+<form method="post" action="{{ url_for('parametres.creer_barreau') }}">
     {{ formulaire.hidden_tag() }}
     {{ formulaire.libelle(size=32) }}
     {{ formulaire.soumettre() }}

@@ -49,10 +49,3 @@ class AjouterRoleForm(FlaskForm):
         "Contact lié (si le rôle l'exige)", validators=[Optional()]
     )
     soumettre = SubmitField("Ajouter ce rôle")
-
-
-class NouvelleMatiereForm(FlaskForm):
-    libelle = StringField(
-        "Nouvelle matière", validators=[DataRequired(message="Ce champ est requis.")]
-    )
-    soumettre = SubmitField("Ajouter")

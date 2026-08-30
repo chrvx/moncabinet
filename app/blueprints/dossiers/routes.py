@@ -7,7 +7,6 @@ from app.blueprints.dossiers.forms import (
     AjouterRoleForm,
     ModifierDossierForm,
     NouveauDossierForm,
-    NouvelleMatiereForm,
     OuvrirDossierForm,
 )
 from app.repositories import documents as documents_repo
@@ -324,40 +323,3 @@ def retirer_intervenant(dossier_id, role_contact_id):
     except RegleRoleViolee as e:
         flash(str(e), "erreur")
     return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
-
-
-# --- Matières (réservé avocat / collaborateur) ------------------------------
-
-
-@bp.route("/matieres")
-@login_required
-@role_requis("avocat", "collaborateur")
-def liste_matieres():
-    formulaire = NouvelleMatiereForm()
-    return render_template(
-        "dossiers/matieres.html",
-        matieres=matieres.lister(actives_seulement=False),
-        formulaire=formulaire,
-    )
-
-
-@bp.route("/matieres", methods=["POST"])
-@login_required
-@role_requis("avocat", "collaborateur")
-def creer_matiere():
-    formulaire = NouvelleMatiereForm()
-    if formulaire.validate_on_submit():
-        try:
-            matieres.creer(formulaire.libelle.data)
-            flash("Matière ajoutée.", "succes")
-        except UniqueViolation:
-            flash("Cette matière existe déjà.", "erreur")
-    return redirect(url_for("dossiers.liste_matieres"))
-
-
-@bp.route("/matieres/<int:matiere_id>/basculer", methods=["POST"])
-@login_required
-@role_requis("avocat", "collaborateur")
-def basculer_matiere(matiere_id):
-    matieres.basculer_actif(matiere_id)
-    return redirect(url_for("dossiers.liste_matieres"))

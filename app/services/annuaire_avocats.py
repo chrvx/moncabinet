@@ -2,35 +2,46 @@
 barreaux, data.gouv.fr) : voir le plan d'intégration pour le contexte.
 
 Il n'existe pas d'API de requête filtrable pour ce jeu de données : seule
-une ressource CSV nationale complète, republiée chaque mois sous un nouvel
-identifiant. `telecharger_csv` résout donc systématiquement la ressource la
-plus récente via l'API dataset de data.gouv.fr avant de la télécharger, et
-`filtrer_par_barreau`/`rechercher` filtrent ensuite ce résultat en mémoire
-— import en masse (commande CLI) et recherche ponctuelle (route API)
-partagent la même source, jamais deux mécanismes réseau distincts.
+une ressource CSV nationale complète, republiée environ une fois par mois
+sous un nouvel identifiant. Comme l'ajout d'avocats est un événement rare
+dans ce cabinet (pas quotidien, souvent les mêmes confrères locaux qui
+reviennent), le CSV est conservé indéfiniment sur disque (voir
+_repertoire_cache) plutôt que retéléchargé à chaque usage : `telecharger_csv`
+ne va chercher le gros fichier (~17 Mo) que si un petit appel à l'API
+dataset (quelques Ko) révèle qu'une nouvelle version a été publiée depuis
+la dernière fois. `filtrer_par_barreau`/`rechercher` filtrent ensuite ce
+résultat en mémoire — import en masse (commande CLI) et recherche
+ponctuelle (route API) partagent la même source et le même cache, jamais
+deux mécanismes réseau distincts.
 """
 
 import csv
 import io
+import json
+import os
 import re
-import time
 import unicodedata
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 
 import requests
+from flask import current_app
 
 URL_DATASET = "https://www.data.gouv.fr/api/1/datasets/annuaire-des-avocats-de-france/"
 DELAI_ATTENTE_SECONDES = 30
 
-#: Durée de vie du cache mémoire du CSV national pour la recherche
-#: ponctuelle depuis l'UI (voir telecharger_csv_avec_cache) : évite de
-#: re-télécharger 17 Mo à chaque recherche, sans empêcher une nouvelle
-#: version mensuelle d'être reprise dans la journée.
-DUREE_CACHE_SECONDES = 6 * 3600
+_NOM_FICHIER_CSV = "dernier.csv"
+_NOM_FICHIER_METADONNEES = "dernier.json"
 
-_cache: dict = {"donnees": None, "horodatage": 0.0}
-
+#: Valeur de cbFormJuri pour un exercice à titre individuel ("cabinet
+#: individuel") : la ligne porte quand même une raison sociale (le nom de
+#: l'avocat lui-même, ex. "ACKERMANN YANNICK") et un SIREN, mais ce n'est
+#: pas une personne morale distincte — voir import_avocats._resoudre_cabinet,
+#: qui ne doit créer/lier un cabinet que pour une vraie structure (SCP,
+#: SELARL, SARL, AARPI...), jamais pour ce cas (de très loin le plus
+#: fréquent : ~52 000 lignes sur ~75 000 dans le fichier national).
+FORME_JURIDIQUE_EXERCICE_INDIVIDUEL = "CABI"
 
 @dataclass
 class AvocatAnnuaire:
@@ -52,6 +63,7 @@ class AvocatAnnuaire:
     ville: str | None
     telephone: str | None
     raison_sociale_cabinet: str | None
+    forme_juridique_cabinet: str | None
     siret_siren_cabinet: str | None
     email: str | None
     date_serment: date | None
@@ -102,17 +114,20 @@ def _lire_ligne(ligne: dict) -> AvocatAnnuaire:
         ville=ligne.get("cbVille") or None,
         telephone=ligne.get("cbTel") or None,
         raison_sociale_cabinet=ligne.get("cbRaisonSociale") or None,
+        forme_juridique_cabinet=ligne.get("cbFormJuri") or None,
         siret_siren_cabinet=ligne.get("cbSiretSiren") or None,
         email=ligne.get("avMelOrdre") or None,
         date_serment=_parser_date(ligne.get("acDateSerment")),
     )
 
 
-def _resoudre_url_derniere_ressource() -> str:
+def _resoudre_derniere_ressource() -> dict:
     """Le dataset republie un nouveau fichier CSV chaque mois sous un
     nouvel identifiant de ressource : on ne code jamais cet identifiant en
     dur, on retrouve systématiquement la ressource CSV la plus récente via
-    le champ "resources" de l'API dataset."""
+    le champ "resources" de l'API dataset. Renvoie la ressource entière
+    (id, url, created_at...), pas seulement son URL, pour pouvoir comparer
+    son id à celui du cache local (voir _repertoire_cache)."""
     reponse = requests.get(URL_DATASET, timeout=DELAI_ATTENTE_SECONDES)
     reponse.raise_for_status()
     ressources_csv = [
@@ -120,19 +135,43 @@ def _resoudre_url_derniere_ressource() -> str:
     ]
     if not ressources_csv:
         raise RuntimeError("Aucune ressource CSV trouvée sur le dataset annuaire-des-avocats-de-france.")
-    plus_recente = max(ressources_csv, key=lambda r: r["created_at"])
-    return plus_recente["url"]
+    return max(ressources_csv, key=lambda r: r["created_at"])
 
 
-def telecharger_csv() -> list[AvocatAnnuaire]:
-    """Télécharge et parse le CSV national complet (~17 Mo, un fichier par
-    mois, tous barreaux confondus). À appeler une seule fois par commande
-    CLI ou requête, le résultat étant destiné à être filtré en mémoire par
-    filtrer_par_barreau/rechercher plutôt que re-téléchargé."""
-    url = _resoudre_url_derniere_ressource()
-    reponse = requests.get(url, timeout=DELAI_ATTENTE_SECONDES)
-    reponse.raise_for_status()
-    contenu = reponse.content.decode("utf-8-sig")
+def _repertoire_cache() -> Path:
+    """Suit la même convention que app/services/generation_documents.py
+    pour ses fichiers générés : un sous-répertoire de current_app.instance_path
+    (donc sous instance/, déjà exclu de git). Valide aussi bien dans une
+    requête que dans une commande Flask CLI (app/commandes.py), qui
+    s'exécute avec un contexte d'application actif."""
+    repertoire = Path(current_app.instance_path) / "annuaire_avocats"
+    repertoire.mkdir(parents=True, exist_ok=True)
+    return repertoire
+
+
+def _lire_metadonnees_locales() -> dict | None:
+    chemin = _repertoire_cache() / _NOM_FICHIER_METADONNEES
+    if not chemin.exists():
+        return None
+    return json.loads(chemin.read_text(encoding="utf-8"))
+
+
+def _ecrire_cache(ressource: dict, contenu: bytes) -> None:
+    repertoire = _repertoire_cache()
+    # Écriture dans un fichier temporaire puis remplacement atomique
+    # (os.replace), pour ne jamais laisser un cache à moitié écrit si le
+    # téléchargement est interrompu en cours de route.
+    chemin_csv = repertoire / _NOM_FICHIER_CSV
+    chemin_temporaire = repertoire / f"{_NOM_FICHIER_CSV}.tmp"
+    chemin_temporaire.write_bytes(contenu)
+    os.replace(chemin_temporaire, chemin_csv)
+    (repertoire / _NOM_FICHIER_METADONNEES).write_text(
+        json.dumps({"id": ressource["id"], "created_at": ressource["created_at"], "url": ressource["url"]}),
+        encoding="utf-8",
+    )
+
+
+def _parser_csv(contenu: str) -> list[AvocatAnnuaire]:
     lecteur = csv.DictReader(io.StringIO(contenu), delimiter=";")
     # Le fichier contient une ligne parasite par barreau (162 constatées),
     # un marqueur de section ("V1.8" en guise de code CNBF, suivi du
@@ -143,6 +182,40 @@ def telecharger_csv() -> list[AvocatAnnuaire]:
         for ligne in lecteur
         if ligne.get("avCnbfCode") and ligne["avCnbfCode"] != "V1.8"
     ]
+
+
+def telecharger_csv() -> list[AvocatAnnuaire]:
+    """Point d'entrée unique pour l'import en masse (CLI) comme pour la
+    recherche ponctuelle (route API) : un téléchargement déclenché par
+    l'un profite aussi à l'autre. Le CSV national (~17 Mo) est conservé
+    indéfiniment sur disque (_repertoire_cache) — un petit appel à l'API
+    dataset (quelques Ko) suffit à savoir si la version en cache est
+    encore la dernière publiée ; le gros fichier n'est retéléchargé que
+    si un nouvel identifiant de ressource est apparu. Si cet appel échoue
+    (réseau indisponible) et qu'un cache local existe, on l'utilise tel
+    quel plutôt que de faire échouer la recherche pour un mois de retard
+    éventuel ; sans cache local du tout, l'erreur remonte normalement."""
+    metadonnees_locales = _lire_metadonnees_locales()
+    chemin_csv = _repertoire_cache() / _NOM_FICHIER_CSV
+
+    try:
+        derniere_ressource = _resoudre_derniere_ressource()
+    except requests.RequestException:
+        if metadonnees_locales and chemin_csv.exists():
+            return _parser_csv(chemin_csv.read_text(encoding="utf-8-sig"))
+        raise
+
+    if (
+        metadonnees_locales
+        and metadonnees_locales.get("id") == derniere_ressource["id"]
+        and chemin_csv.exists()
+    ):
+        return _parser_csv(chemin_csv.read_text(encoding="utf-8-sig"))
+
+    reponse = requests.get(derniere_ressource["url"], timeout=DELAI_ATTENTE_SECONDES)
+    reponse.raise_for_status()
+    _ecrire_cache(derniere_ressource, reponse.content)
+    return _parser_csv(reponse.content.decode("utf-8-sig"))
 
 
 def normaliser_libelle_barreau(libelle: str) -> str:
@@ -177,18 +250,6 @@ def apparier_barreau_local(barreaux_locaux, barreau_libelle_annuaire: str):
     return next(
         (b for b in barreaux_locaux if normaliser_libelle_barreau(b.libelle) == cible), None
     )
-
-
-def telecharger_csv_avec_cache() -> list[AvocatAnnuaire]:
-    """Comme telecharger_csv, mais mémorise le résultat en mémoire process
-    pendant DUREE_CACHE_SECONDES : pensé pour la recherche ponctuelle
-    depuis l'UI (voir contacts.routes.api_annuaire_avocats), où
-    retélécharger 17 Mo à chaque frappe serait trop lent."""
-    maintenant = time.monotonic()
-    if _cache["donnees"] is None or maintenant - _cache["horodatage"] > DUREE_CACHE_SECONDES:
-        _cache["donnees"] = telecharger_csv()
-        _cache["horodatage"] = maintenant
-    return _cache["donnees"]
 
 
 def rechercher(avocats: list[AvocatAnnuaire], nom: str, prenom: str | None = None) -> list[AvocatAnnuaire]:

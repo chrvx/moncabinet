@@ -6,7 +6,7 @@ from app.modeles import Barreau, Civilite, Departement, Pays, TypeRole
 # Tables de référence : lecture seule côté application (leur contenu est
 # fixé par les migrations, pas par les utilisateurs de l'application) — à
 # l'exception de BARREAU, gérée depuis l'écran d'administration
-# contacts.liste_barreaux (voir les fonctions creer_barreau/
+# parametres.liste_barreaux (voir les fonctions creer_barreau/
 # basculer_actif_barreau ci-dessous).
 
 

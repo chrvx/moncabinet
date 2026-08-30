@@ -34,7 +34,7 @@ def enregistrer_commandes(app):
     @click.option(
         "--barreau",
         prompt=True,
-        help="Libellé exact du barreau local (ex: \"barreau d'Agen\"), voir flask contacts.liste_barreaux.",
+        help="Libellé exact du barreau local (ex: \"barreau d'Agen\"), voir flask parametres.liste_barreaux.",
     )
     @click.option(
         "--utilisateur",
@@ -59,7 +59,7 @@ def enregistrer_commandes(app):
         )
         if barreau_local is None:
             raise click.ClickException(
-                f"Barreau local introuvable : {barreau!r} (voir flask contacts.liste_barreaux pour les libellés exacts)."
+                f"Barreau local introuvable : {barreau!r} (voir flask parametres.liste_barreaux pour les libellés exacts)."
             )
 
         click.echo("Téléchargement de l'annuaire national (~17 Mo)...")

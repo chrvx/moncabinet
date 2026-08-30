@@ -104,6 +104,16 @@ code {
     font-weight: 500;
 }
 
+.nav-groupe-titre {
+    margin-top: 0.6rem;
+    padding: 0 0.7rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+}
+
 .nav-laterale a:hover {
     background: rgba(255, 255, 255, 0.06);
     color: #fff;
@@ -350,7 +360,8 @@ input[type="submit"]:hover {
 
 /* ---------- Listes de résultats (contacts, dossiers, coordonnées...) ---------- */
 
-.contenu-page > ul {
+.contenu-page > ul,
+.carte > ul {
     list-style: none;
     margin: 0 0 1rem;
     padding: 0;
@@ -359,22 +370,27 @@ input[type="submit"]:hover {
     overflow: hidden;
 }
 
-.contenu-page > ul > li {
+.contenu-page > ul > li,
+.carte > ul > li {
     padding: 0.85rem 1rem;
     border-bottom: 1px solid var(--bordure);
 }
 
-.contenu-page > ul > li:last-child { border-bottom: none; }
-.contenu-page > ul > li:hover { background: var(--fond); }
+.contenu-page > ul > li:last-child,
+.carte > ul > li:last-child { border-bottom: none; }
+.contenu-page > ul > li:hover,
+.carte > ul > li:hover { background: var(--fond); }
 
-.contenu-page > ul ul {
+.contenu-page > ul ul,
+.carte > ul ul {
     list-style: none;
     margin: 0.6rem 0 0;
     padding: 0.6rem 0 0 0;
     border-top: 1px dashed var(--bordure);
 }
 
-.contenu-page > ul ul li { padding: 0.35rem 0; }
+.contenu-page > ul ul li,
+.carte > ul ul li { padding: 0.35rem 0; }
 
 /* ---------- Tuiles d'accueil ---------- */
 
@@ -460,6 +476,39 @@ th {
     color: var(--primaire-survol);
 }
 
+/* ---------- Fiche contact : disposition en 2 colonnes ---------- */
+
+.disposition-fiche {
+    display: grid;
+    grid-template-columns: minmax(260px, 340px) 1fr;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.disposition-fiche > .colonne {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.carte {
+    background: var(--surface);
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    padding: 1.25rem 1.5rem 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.carte:last-child { margin-bottom: 0; }
+
+.carte h2 {
+    margin: 0 0 0.9rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--bordure);
+}
+
+.carte h3:first-of-type { margin-top: 0; }
+
 /* ---------- Repli/détail (accordéons) ---------- */
 
 details {
@@ -536,4 +585,5 @@ details form { margin-top: 0.9rem; }
 
     .contenu-page { margin: 1rem; padding: 1.25rem; }
     .nom-utilisateur { display: none; }
+    .disposition-fiche { grid-template-columns: 1fr; gap: 1rem; }
 }

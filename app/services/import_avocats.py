@@ -8,10 +8,27 @@ rapprochement (code CNBF, SIREN du cabinet) et de synchronisation des
 coordonnées (voir app/repositories/coordonnees.py)."""
 
 from app.repositories import contacts, coordonnees, qualifications
-from app.services.annuaire_avocats import AvocatAnnuaire
+from app.services.annuaire_avocats import FORME_JURIDIQUE_EXERCICE_INDIVIDUEL, AvocatAnnuaire
 
 
 def _resoudre_cabinet(avocat_annuaire: AvocatAnnuaire, utilisateur_id: int) -> int | None:
+    """None pour un exercice à titre individuel (cbFormJuri = "CABI") :
+    le CSV porte quand même une raison sociale et un SIREN sur cette ligne
+    (le nom de l'avocat lui-même), mais ce n'est pas une personne morale
+    distincte — n'en créer une que pour une vraie structure d'exercice
+    (SCP, SELARL, SARL, AARPI...).
+
+    À la création d'un nouveau cabinet, son adresse est reprise de cette
+    ligne (une seule fois, jamais resynchronisée ensuite — même logique
+    que coordonnees.ajouter_adresse pour un contact individuel : c'est
+    presque toujours vraiment le lieu d'exercice partagé). L'email et le
+    téléphone de la ligne, en revanche, ne sont jamais recopiés sur le
+    cabinet : ce sont la ligne directe et la boîte mail personnelle de CET
+    avocat, pas un contact générique du cabinet — les attribuer au cabinet
+    ferait passer les coordonnées d'un seul associé pour celles de toute
+    la structure."""
+    if avocat_annuaire.forme_juridique_cabinet in (None, "", FORME_JURIDIQUE_EXERCICE_INDIVIDUEL):
+        return None
     if not avocat_annuaire.siret_siren_cabinet or not avocat_annuaire.raison_sociale_cabinet:
         return None
     cabinet = contacts.recuperer_personne_morale_par_siren(avocat_annuaire.siret_siren_cabinet)
@@ -19,8 +36,19 @@ def _resoudre_cabinet(avocat_annuaire: AvocatAnnuaire, utilisateur_id: int) -> i
         return cabinet.contact_id
     cabinet = contacts.creer_personne_morale(
         avocat_annuaire.raison_sociale_cabinet, utilisateur_id,
+        forme=avocat_annuaire.forme_juridique_cabinet,
         siren=avocat_annuaire.siret_siren_cabinet,
     )
+    if avocat_annuaire.libelle_voie or avocat_annuaire.ville:
+        coordonnees.ajouter_adresse(
+            cabinet.contact_id, utilisateur_id,
+            numero_voie=avocat_annuaire.numero_voie,
+            libelle_voie=avocat_annuaire.libelle_voie,
+            complement=avocat_annuaire.adresse2,
+            code_postal=avocat_annuaire.code_postal,
+            commune=avocat_annuaire.ville,
+            source="import_annuaire",
+        )
     return cabinet.contact_id
 
 

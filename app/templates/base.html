@@ -21,25 +21,26 @@
                 Accueil
             </a>
             <a href="{{ url_for('contacts.recherche') }}"
-               class="{{ 'actif' if request.blueprint == 'contacts' and request.endpoint != 'contacts.liste_barreaux' else '' }}">
+               class="{{ 'actif' if request.blueprint == 'contacts' else '' }}">
                 <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-3.8 4-5.8 7-5.8s6 2 7 5.8"/></svg>
                 Contacts
             </a>
             <a href="{{ url_for('dossiers.liste') }}"
-               class="{{ 'actif' if request.blueprint == 'dossiers' and request.endpoint != 'dossiers.liste_matieres' else '' }}">
+               class="{{ 'actif' if request.blueprint == 'dossiers' else '' }}">
                 <svg viewBox="0 0 24 24"><path d="M4 7h5l1.5 2H20v10H4z"/></svg>
                 Dossiers
             </a>
             {% if current_user.is_authenticated and current_user.role in ("avocat", "collaborateur") %}
-            <a href="{{ url_for('dossiers.liste_matieres') }}"
-               class="{{ 'actif' if request.endpoint == 'dossiers.liste_matieres' else '' }}">
-                <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
-                Matières
-            </a>
-            <a href="{{ url_for('contacts.liste_barreaux') }}"
-               class="{{ 'actif' if request.endpoint == 'contacts.liste_barreaux' else '' }}">
+            <span class="nav-groupe-titre">Paramètres</span>
+            <a href="{{ url_for('parametres.liste_barreaux') }}"
+               class="{{ 'actif' if request.endpoint == 'parametres.liste_barreaux' else '' }}">
                 <svg viewBox="0 0 24 24"><path d="M12 3 3 8l9 5 9-5z"/><path d="M6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5"/></svg>
                 Barreaux
+            </a>
+            <a href="{{ url_for('parametres.liste_matieres') }}"
+               class="{{ 'actif' if request.endpoint == 'parametres.liste_matieres' else '' }}">
+                <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+                Matières
             </a>
             {% endif %}
         </nav>
