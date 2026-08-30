@@ -1,0 +1,3 @@
+[DEFAULT]
+sources = migrations
+database = postgresql+psycopg://moncabinet_app:VOTRE_MOT_DE_PASSE@localhost:5432/moncabinet

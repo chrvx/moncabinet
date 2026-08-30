@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block titre %}Mon Cabinet{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="{{ '' if current_user.is_authenticated else 'sans-session' }}">
+<input type="checkbox" id="bascule-menu" class="bascule-menu">
+<div class="app-shell">
+    <aside class="barre-laterale">
+        <div class="marque">
+            <span class="marque-icone">⚖</span>
+            <span class="marque-texte">Mon Cabinet</span>
+        </div>
+        <nav class="nav-laterale">
+            <a href="{{ url_for('accueil.index') }}"
+               class="{{ 'actif' if request.endpoint == 'accueil.index' else '' }}">
+                <svg viewBox="0 0 24 24"><path d="M4 11.5 12 4l8 7.5M6 10v9h5v-5h2v5h5v-9"/></svg>
+                Accueil
+            </a>
+            <a href="{{ url_for('contacts.recherche') }}"
+               class="{{ 'actif' if request.blueprint == 'contacts' and request.endpoint != 'contacts.liste_barreaux' else '' }}">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-3.8 4-5.8 7-5.8s6 2 7 5.8"/></svg>
+                Contacts
+            </a>
+            <a href="{{ url_for('dossiers.liste') }}"
+               class="{{ 'actif' if request.blueprint == 'dossiers' and request.endpoint != 'dossiers.liste_matieres' else '' }}">
+                <svg viewBox="0 0 24 24"><path d="M4 7h5l1.5 2H20v10H4z"/></svg>
+                Dossiers
+            </a>
+            {% if current_user.is_authenticated and current_user.role in ("avocat", "collaborateur") %}
+            <a href="{{ url_for('dossiers.liste_matieres') }}"
+               class="{{ 'actif' if request.endpoint == 'dossiers.liste_matieres' else '' }}">
+                <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+                Matières
+            </a>
+            <a href="{{ url_for('contacts.liste_barreaux') }}"
+               class="{{ 'actif' if request.endpoint == 'contacts.liste_barreaux' else '' }}">
+                <svg viewBox="0 0 24 24"><path d="M12 3 3 8l9 5 9-5z"/><path d="M6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5"/></svg>
+                Barreaux
+            </a>
+            {% endif %}
+        </nav>
+    </aside>
+    <label for="bascule-menu" class="fond-menu" aria-hidden="true"></label>
+    <div class="zone-principale">
+        <header class="barre-superieure">
+            <label for="bascule-menu" class="bouton-menu" aria-label="Ouvrir le menu">
+                <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </label>
+            <span class="marque-mobile">Mon Cabinet</span>
+            {% if current_user.is_authenticated %}
+            <div class="utilisateur-connecte">
+                <span class="avatar">{{ current_user.nom[0] | upper }}</span>
+                <span class="nom-utilisateur">{{ current_user.nom }}</span>
+                <a class="lien-deconnexion" href="{{ url_for('auth.deconnexion') }}">Déconnexion</a>
+            </div>
+            {% endif %}
+        </header>
+        <main class="contenu-page">
+            {% if not current_user.is_authenticated %}
+            <div class="marque marque-connexion">
+                <span class="marque-icone">⚖</span>
+                <span class="marque-texte">Mon Cabinet</span>
+            </div>
+            {% endif %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for categorie, message in messages %}
+                    <div class="message message-{{ categorie }}">{{ message }}</div>
+                {% endfor %}
+            {% endwith %}
+            {% block contenu %}{% endblock %}
+        </main>
+    </div>
+</div>
+</body>
+</html>

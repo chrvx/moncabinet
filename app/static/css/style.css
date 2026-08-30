@@ -1,0 +1,539 @@
+/* ---------- Fondations ---------- */
+
+:root {
+    --fond: #f3f4fb;
+    --surface: #ffffff;
+    --texte: #1f2433;
+    --texte-attenue: #6b7280;
+    --bordure: #e6e8f0;
+    --primaire: #4f46e5;
+    --primaire-survol: #4338ca;
+    --primaire-clair: #eef0fd;
+    --danger: #dc2626;
+    --danger-clair: #fdecea;
+    --succes: #15803d;
+    --succes-clair: #e9f9ef;
+    --avertissement: #b45309;
+    --avertissement-clair: #fef3c7;
+    --barre-laterale-fond: #1c2035;
+    --barre-laterale-texte: #aeb3c9;
+    --barre-laterale-texte-actif: #ffffff;
+    --rayon: 10px;
+    --ombre: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--fond);
+    color: var(--texte);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+a { color: var(--primaire); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1, h2, h3 { line-height: 1.25; font-weight: 600; }
+h1 { font-size: 1.4rem; margin: 0 0 1.25rem; padding-bottom: 0.9rem; border-bottom: 1px solid var(--bordure); }
+h2 { font-size: 1.05rem; margin: 2rem 0 0.75rem; }
+h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; color: var(--texte-attenue); }
+
+code {
+    background: var(--primaire-clair);
+    color: var(--primaire-survol);
+    padding: 0.15rem 0.4rem;
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+/* ---------- Structure générale (tableau de bord) ---------- */
+
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.bascule-menu { display: none; }
+
+.barre-laterale {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--barre-laterale-fond);
+    color: var(--barre-laterale-texte);
+    padding: 1.25rem 0.9rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.marque {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.6rem 1.5rem;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.marque-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--primaire);
+    font-size: 1rem;
+}
+
+.nav-laterale { display: flex; flex-direction: column; gap: 0.15rem; }
+
+.nav-laterale a {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 8px;
+    color: var(--barre-laterale-texte);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.nav-laterale a:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    text-decoration: none;
+}
+
+.nav-laterale a.actif {
+    background: var(--primaire);
+    color: #fff;
+}
+
+.nav-laterale svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.fond-menu { display: none; }
+
+.zone-principale {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.barre-superieure {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--bordure);
+    padding: 0.7rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.bouton-menu {
+    display: none;
+    cursor: pointer;
+    padding: 0.3rem;
+}
+
+.bouton-menu svg {
+    width: 22px;
+    height: 22px;
+    stroke: var(--texte);
+    stroke-width: 1.8;
+}
+
+.marque-mobile { display: none; font-weight: 700; }
+
+.utilisateur-connecte {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+}
+
+.avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--primaire-clair);
+    color: var(--primaire-survol);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.nom-utilisateur { color: var(--texte); font-weight: 500; }
+
+.lien-deconnexion {
+    color: var(--texte-attenue);
+    font-size: 0.85rem;
+    padding-left: 0.6rem;
+    border-left: 1px solid var(--bordure);
+}
+
+.contenu-page {
+    margin: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    box-shadow: var(--ombre);
+    padding: 1.75rem 2rem 2.25rem;
+}
+
+/* ---------- Écran de connexion ---------- */
+
+body.sans-session .barre-laterale,
+body.sans-session .barre-superieure,
+body.sans-session .fond-menu {
+    display: none;
+}
+
+body.sans-session .app-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(160deg, var(--barre-laterale-fond), #30365a);
+    padding: 1.5rem;
+}
+
+body.sans-session .zone-principale { flex: none; width: 100%; max-width: 360px; }
+
+body.sans-session .contenu-page {
+    margin: 0;
+    box-shadow: 0 20px 40px rgba(16, 24, 40, 0.25);
+    padding: 2rem 2rem 2.25rem;
+}
+
+.marque-connexion {
+    color: var(--texte);
+    justify-content: center;
+    padding: 0 0 1.5rem;
+}
+
+body.sans-session h1 {
+    text-align: center;
+    border: none;
+    padding: 0;
+    margin-bottom: 1.25rem;
+}
+
+/* ---------- Messages flash ---------- */
+
+.message {
+    padding: 0.65rem 0.9rem;
+    border-radius: 8px;
+    background: var(--primaire-clair);
+    color: var(--primaire-survol);
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    border-left: 3px solid var(--primaire);
+}
+
+.message-erreur {
+    background: var(--danger-clair);
+    color: var(--danger);
+    border-left-color: var(--danger);
+}
+
+.message-succes {
+    background: var(--succes-clair);
+    color: var(--succes);
+    border-left-color: var(--succes);
+}
+
+/* ---------- Texte utilitaire ---------- */
+
+.erreur-champ { color: var(--danger); font-size: 0.82rem; display: block; margin-top: 0.25rem; }
+.aide { font-size: 0.85rem; color: var(--texte-attenue); }
+
+.badge-avertissement {
+    display: inline-block;
+    font-size: 0.8rem;
+    color: var(--avertissement);
+    background: var(--avertissement-clair);
+    border-radius: var(--rayon);
+    padding: 0.1rem 0.5rem;
+    margin-left: 0.4rem;
+}
+.etiquette-type { color: var(--texte-attenue); font-size: 0.85rem; }
+
+/* ---------- Formulaires ---------- */
+
+form p { margin: 0 0 0.9rem; }
+
+label {
+    display: inline-block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--texte-attenue);
+    margin-bottom: 0.3rem;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="date"],
+input[type="number"],
+select,
+textarea {
+    font: inherit;
+    color: var(--texte);
+    background: var(--surface);
+    border: 1px solid var(--bordure);
+    border-radius: 8px;
+    padding: 0.5rem 0.7rem;
+    max-width: 100%;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="date"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primaire);
+    box-shadow: 0 0 0 3px var(--primaire-clair);
+}
+
+fieldset {
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    padding: 1rem 1.25rem 0.25rem;
+    margin: 0 0 1.5rem;
+}
+
+legend { font-weight: 600; padding: 0 0.4rem; }
+
+/* ---------- Boutons ---------- */
+
+button,
+input[type="submit"] {
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.87rem;
+    color: #fff;
+    background: var(--primaire);
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1.1rem;
+    cursor: pointer;
+}
+
+button:hover,
+input[type="submit"]:hover {
+    background: var(--primaire-survol);
+}
+
+/* ---------- Listes de résultats (contacts, dossiers, coordonnées...) ---------- */
+
+.contenu-page > ul {
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    overflow: hidden;
+}
+
+.contenu-page > ul > li {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--bordure);
+}
+
+.contenu-page > ul > li:last-child { border-bottom: none; }
+.contenu-page > ul > li:hover { background: var(--fond); }
+
+.contenu-page > ul ul {
+    list-style: none;
+    margin: 0.6rem 0 0;
+    padding: 0.6rem 0 0 0;
+    border-top: 1px dashed var(--bordure);
+}
+
+.contenu-page > ul ul li { padding: 0.35rem 0; }
+
+/* ---------- Tuiles d'accueil ---------- */
+
+.grille-tuiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.tuile {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 1.1rem 1.2rem;
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    color: var(--texte);
+    background: var(--surface);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tuile:hover {
+    text-decoration: none;
+    border-color: var(--primaire);
+    box-shadow: var(--ombre);
+}
+
+.tuile-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: var(--primaire-clair);
+    color: var(--primaire-survol);
+}
+
+.tuile-icone svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.tuile-texte { display: flex; flex-direction: column; gap: 0.15rem; }
+.tuile-texte strong { font-size: 0.95rem; }
+.tuile-texte span:last-child { font-size: 0.82rem; color: var(--texte-attenue); }
+
+/* ---------- Tables ---------- */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+th, td {
+    text-align: left;
+    padding: 0.5rem 0.7rem;
+    border-bottom: 1px solid var(--bordure);
+}
+
+th {
+    font-size: 0.82rem;
+    color: var(--texte-attenue);
+    font-weight: 600;
+}
+
+.icone-type {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    color: var(--primaire-survol);
+}
+
+/* ---------- Repli/détail (accordéons) ---------- */
+
+details {
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    padding: 0.75rem 1rem;
+    margin: 0 0 1rem;
+}
+
+details[open] { padding-bottom: 1.1rem; }
+
+summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--primaire);
+    list-style: none;
+}
+
+summary::-webkit-details-marker { display: none; }
+summary::before { content: "+ "; }
+details[open] summary::before { content: "– "; }
+
+details form { margin-top: 0.9rem; }
+
+/* ---------- Pagination ---------- */
+
+.contenu-page > p:has(> a[href*="page="], > strong) {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.contenu-page > p > a,
+.contenu-page > p > strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.5rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    text-decoration: none;
+}
+
+.contenu-page > p > strong { background: var(--primaire); color: #fff; }
+.contenu-page > p > a:hover { background: var(--primaire-clair); text-decoration: none; }
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 900px) {
+    .barre-laterale {
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 20;
+        transform: translateX(-100%);
+        transition: transform 0.2s ease;
+    }
+
+    .bouton-menu { display: inline-flex; }
+    .marque-mobile { display: inline; }
+
+    .fond-menu {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 18, 32, 0.45);
+        z-index: 15;
+    }
+
+    .bascule-menu:checked ~ .app-shell .barre-laterale { transform: translateX(0); }
+    .bascule-menu:checked ~ .app-shell .fond-menu { display: block; }
+
+    .contenu-page { margin: 1rem; padding: 1.25rem; }
+    .nom-utilisateur { display: none; }
+}

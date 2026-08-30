@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_macros.html" import champ %}
+{% block titre %}Générer un document{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id) }}">&larr; Retour au dossier</a></p>
+<h1>{{ modele.libelle }}</h1>
+
+<form method="post">
+    {{ formulaire.hidden_tag() }}
+    {% for champ_extra in modele.champs_extra %}
+        {{ champ(formulaire[champ_extra.nom]) }}
+    {% endfor %}
+    {{ formulaire.soumettre() }}
+</form>
+{% endblock %}

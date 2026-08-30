@@ -1,0 +1,8 @@
+{
+  "libelle": "Lettre simple",
+  "champs_extra": [
+    {"nom": "objet", "label": "Objet de la lettre", "type": "texte"},
+    {"nom": "corps", "label": "Corps de la lettre", "type": "zone_texte"},
+    {"nom": "urgent", "label": "Marquer comme urgent", "type": "case"}
+  ]
+}

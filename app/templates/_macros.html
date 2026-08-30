@@ -1,0 +1,52 @@
+{% macro champ(field) %}
+<p>
+    {{ field.label }}<br>
+    {{ field() }}
+    {% for erreur in field.errors %}
+        <br><span class="erreur-champ">{{ erreur }}</span>
+    {% endfor %}
+</p>
+{% endmacro %}
+
+{% macro libelle_selection(field) %}
+    {%- for valeur, texte in field.choices -%}
+        {%- if valeur == (field.data or "") -%}{{ texte }}{%- endif -%}
+    {%- endfor -%}
+{% endmacro %}
+
+{% macro info(etiquette, valeur) %}
+    {% if valeur %}<p><strong>{{ etiquette }} :</strong> {{ valeur }}</p>{% endif %}
+{% endmacro %}
+
+{% macro icone_type_contact(type_contact) %}
+{%- if type_contact == "personne_physique" -%}
+<svg class="icone-type" viewBox="0 0 24 24"><title>Personne physique</title><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-3.8 4-5.8 7-5.8s6 2 7 5.8"/></svg>
+{%- else -%}
+<svg class="icone-type" viewBox="0 0 24 24"><title>Personne morale</title><path d="M5 21V4h9v17M14 21V9h5v12"/><path d="M8 8h2M8 12h2M8 16h2"/></svg>
+{%- endif -%}
+{% endmacro %}
+
+{% macro tableau_contacts(resultats) %}
+<table>
+    <thead>
+        <tr>
+            <th>Type</th>
+            <th>Nom / Dénomination</th>
+            <th>Prénom</th>
+            <th>Téléphone</th>
+            <th>Email</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for r in resultats %}
+        <tr>
+            <td>{{ icone_type_contact(r.type_contact) }}</td>
+            <td><a href="{{ url_for('contacts.fiche', contact_id=r.contact_id) }}">{{ r.nom }}</a></td>
+            <td>{{ r.prenom or "" }}</td>
+            <td>{{ r.telephone or "" }}</td>
+            <td>{% if r.email %}<a href="mailto:{{ r.email }}">{{ r.email }}</a>{% endif %}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endmacro %}

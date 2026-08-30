@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titre %}Brouillons{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('dossiers.liste') }}">&larr; Retour aux dossiers</a></p>
+<h1>Brouillons</h1>
+
+{% if dossiers %}
+    <table>
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Créé le</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for d, nom in dossiers %}
+            <tr>
+                <td><a href="{{ url_for('dossiers.fiche', dossier_id=d.id) }}">{{ nom }}</a></td>
+                <td>{{ d.cree_le.date() }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Aucun brouillon pour l'instant.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titre %}Avocat depuis l'annuaire national{% endblock %}
+{% block contenu %}
+<h1>Rechercher un avocat dans l'annuaire national</h1>
+<p>
+    Recherche dans l'Annuaire des avocats de France (data.gouv.fr, tous
+    barreaux confondus). Le contact créé pourra être complété ensuite
+    depuis sa fiche, comme pour une création manuelle.
+</p>
+
+<p>
+    <label for="annuaire-nom">Nom</label><br>
+    <input type="text" id="annuaire-nom" size="32" autofocus>
+</p>
+<p>
+    <label for="annuaire-prenom">Prénom (optionnel)</label><br>
+    <input type="text" id="annuaire-prenom" size="32">
+</p>
+
+<div id="annuaire-resultats"></div>
+
+<form id="annuaire-formulaire-creation" method="post"
+      action="{{ url_for('contacts.nouveau_avocat_annuaire') }}">
+    {{ formulaire.csrf_token }}
+    {{ formulaire.code_cnbf(id="annuaire-code-cnbf") }}
+</form>
+
+<script src="{{ url_for('static', filename='js/annuaire_avocats.js') }}"></script>
+{% endblock %}

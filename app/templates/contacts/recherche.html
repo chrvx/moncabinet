@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import tableau_contacts %}
+{% block titre %}Contacts{% endblock %}
+{% block contenu %}
+<h1>Contacts</h1>
+
+<div class="grille-tuiles">
+    <a class="tuile" href="{{ url_for('contacts.nouveau') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Nouveau contact</strong>
+            <span>Créer une fiche contact</span>
+        </span>
+    </a>
+    <a class="tuile" href="{{ url_for('contacts.liste_avocats') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-3.8 4-5.8 7-5.8s6 2 7 5.8"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Avocats</strong>
+            <span>Voir tous les avocats</span>
+        </span>
+    </a>
+    <a class="tuile" href="{{ url_for('contacts.liste_clients') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4-3 7-7 8-4-1-7-4-7-8V6z"/><path d="M9 12l2 2 4-4"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Clients</strong>
+            <span>Voir tous les clients</span>
+        </span>
+    </a>
+    <a class="tuile" href="{{ url_for('contacts.liste_adversaires') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Adversaires</strong>
+            <span>Voir tous les adversaires</span>
+        </span>
+    </a>
+</div>
+
+<form method="get">
+    <input type="text" name="q" id="recherche-q" value="{{ terme }}"
+           placeholder="Nom, prénom ou raison sociale" size="40" autocomplete="off">
+    <button type="submit">Rechercher</button>
+</form>
+
+<div id="zone-resultats-contacts">
+{% if terme %}
+    {% if resultats %}
+        {{ tableau_contacts(resultats) }}
+    {% else %}
+        <p>Aucun contact ne correspond à « {{ terme }} ».</p>
+    {% endif %}
+{% else %}
+    <h2>Tous les contacts</h2>
+    {% if resultats %}
+        {{ tableau_contacts(resultats) }}
+    {% else %}
+        <p>Aucun contact enregistré pour l'instant.</p>
+    {% endif %}
+
+    {% if nb_pages > 1 %}
+        <p>
+        {% for p in range(1, nb_pages + 1) %}
+            {% if p == page %}
+                <strong>{{ p }}</strong>
+            {% else %}
+                <a href="{{ url_for('contacts.recherche', page=p) }}">{{ p }}</a>
+            {% endif %}
+        {% endfor %}
+        </p>
+    {% endif %}
+{% endif %}
+</div>
+
+<script src="{{ url_for('static', filename='js/filtre_contacts.js') }}"></script>
+{% endblock %}

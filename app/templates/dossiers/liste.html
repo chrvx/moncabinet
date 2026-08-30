@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block titre %}Dossiers{% endblock %}
+{% block contenu %}
+<h1>Dossiers</h1>
+
+<div class="grille-tuiles">
+    <a class="tuile" href="{{ url_for('dossiers.liste_clos') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><path d="M4 4h16v4H4z"/><path d="M4 8v12h16V8"/><path d="M10 12h4"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Dossiers clôturés</strong>
+            <span>Consulter les dossiers archivés</span>
+        </span>
+    </a>
+    <a class="tuile" href="{{ url_for('dossiers.liste_brouillons') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><path d="M4 20h4L18 6l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Brouillons</strong>
+            <span>Reprendre un dossier pas encore ouvert</span>
+        </span>
+    </a>
+</div>
+
+<h2>Dossiers ouverts</h2>
+{% if dossiers %}
+    <table>
+        <thead>
+            <tr>
+                <th>Référence</th>
+                <th>Nom</th>
+                <th>Type</th>
+                <th>Matière</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for d, nom in dossiers %}
+            <tr>
+                <td><a href="{{ url_for('dossiers.fiche', dossier_id=d.id) }}">{{ d.reference }}</a></td>
+                <td>{{ nom }}</td>
+                <td>{{ categorie_libelles.get(d.categorie, "—") }}</td>
+                <td>{{ matiere_libelles.get(d.matiere_id, "—") }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>Aucun dossier ouvert pour l'instant.</p>
+{% endif %}
+{% endblock %}

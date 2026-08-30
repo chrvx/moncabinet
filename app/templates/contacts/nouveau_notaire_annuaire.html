@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block titre %}Office notarial depuis le répertoire local{% endblock %}
+{% block contenu %}
+<h1>Rechercher un office notarial dans le répertoire local</h1>
+<p>
+    Recherche dans le répertoire local des offices notariaux (données
+    publiques Sirene/annuaires professionnels, un CSV par département —
+    voir app/data/notaires/). Il n'existe pas d'API filtrable équivalente à
+    l'Annuaire des avocats pour les notaires : ce répertoire ne couvre donc
+    que les départements pour lesquels un CSV a été ajouté.
+</p>
+<p>
+    Le contact créé est l'<strong>office</strong> (personne morale). Un
+    notaire associé se crée ensuite comme une personne physique classique,
+    à rattacher à cet office depuis sa fiche (champ « Office notarial »).
+</p>
+
+<p>
+    <label for="annuaire-terme">Nom de l'office ou commune</label><br>
+    <input type="text" id="annuaire-terme" size="32" autofocus>
+</p>
+
+<div id="annuaire-resultats"></div>
+
+<form id="annuaire-formulaire-creation" method="post"
+      action="{{ url_for('contacts.nouveau_notaire_annuaire') }}">
+    {{ formulaire.csrf_token }}
+    {{ formulaire.nom(id="annuaire-nom") }}
+    {{ formulaire.siren(id="annuaire-siren") }}
+    {{ formulaire.numero_voie(id="annuaire-numero-voie") }}
+    {{ formulaire.libelle_voie(id="annuaire-libelle-voie") }}
+    {{ formulaire.code_postal(id="annuaire-code-postal") }}
+    {{ formulaire.commune(id="annuaire-commune") }}
+</form>
+
+<script src="{{ url_for('static', filename='js/annuaire_notaires.js') }}"></script>
+{% endblock %}

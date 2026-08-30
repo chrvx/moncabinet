@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titre %}Nouvelle personne physique{% endblock %}
+{% block contenu %}
+<h1>Nouvelle personne physique</h1>
+<p>Seul le nom est obligatoire ; le reste se complète depuis la fiche du contact.</p>
+<form method="post">
+    {{ formulaire.hidden_tag() }}
+    <p>{{ formulaire.nom.label }}<br>{{ formulaire.nom(size=32) }}</p>
+    <p>{{ formulaire.prenom.label }}<br>{{ formulaire.prenom(size=32) }}</p>
+    {{ formulaire.soumettre() }}
+</form>
+{% endblock %}

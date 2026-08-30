@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block titre %}Nouvelle personne morale{% endblock %}
+{% block contenu %}
+<h1>Nouvelle personne morale</h1>
+<p>Seule la raison sociale est obligatoire ; le reste se complète depuis la fiche du contact.</p>
+<form method="post">
+    {{ formulaire.hidden_tag() }}
+    <p>{{ formulaire.raison_sociale.label }}<br>{{ formulaire.raison_sociale(size=40) }}</p>
+    {{ formulaire.soumettre() }}
+</form>
+{% endblock %}

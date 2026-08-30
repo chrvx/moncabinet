@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block titre %}Mon Cabinet — Accueil{% endblock %}
+{% block contenu %}
+<h1>Accueil</h1>
+
+<div class="grille-tuiles">
+    <a class="tuile" href="{{ url_for('contacts.recherche') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-3.8 4-5.8 7-5.8s6 2 7 5.8"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Contacts</strong>
+            <span>Rechercher ou créer une fiche contact</span>
+        </span>
+    </a>
+    <a class="tuile" href="{{ url_for('dossiers.liste') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><path d="M4 7h5l1.5 2H20v10H4z"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Dossiers</strong>
+            <span>Consulter les dossiers en cours</span>
+        </span>
+    </a>
+    {% if current_user.role in ("avocat", "collaborateur") %}
+    <a class="tuile" href="{{ url_for('dossiers.liste_matieres') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Matières</strong>
+            <span>Gérer les matières du cabinet</span>
+        </span>
+    </a>
+    {% endif %}
+</div>
+
+<p class="aide">Connexion à PostgreSQL vérifiée — version détectée : <code>{{ version_postgres }}</code></p>
+{% endblock %}

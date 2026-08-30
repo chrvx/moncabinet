@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titre %}Nouveau contact{% endblock %}
+{% block contenu %}
+<h1>Nouveau contact</h1>
+
+<div class="grille-tuiles">
+    <a class="tuile" href="{{ url_for('contacts.nouveau_personne_physique') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-3.8 4-5.8 7-5.8s6 2 7 5.8"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Personne physique</strong>
+            <span>Créer une fiche personne physique</span>
+        </span>
+    </a>
+    <a class="tuile" href="{{ url_for('contacts.nouveau_personne_morale') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><path d="M5 21V4h9v17M14 21V9h5v12"/><path d="M8 8h2M8 12h2M8 16h2"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Personne morale</strong>
+            <span>Créer une fiche personne morale</span>
+        </span>
+    </a>
+    <a class="tuile" href="{{ url_for('contacts.nouveau_avocat_annuaire_recherche') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Avocat depuis l'annuaire national</strong>
+            <span>Rechercher un confrère dans l'Annuaire des avocats de France</span>
+        </span>
+    </a>
+    <a class="tuile" href="{{ url_for('contacts.nouveau_notaire_annuaire_recherche') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><path d="M5 21V4h9v17M14 21V9h5v12"/><path d="M8 8h2M8 12h2M8 16h2"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Office notarial depuis le répertoire local</strong>
+            <span>Rechercher un office dans le répertoire local des notaires (départements couverts uniquement)</span>
+        </span>
+    </a>
+</div>
+{% endblock %}

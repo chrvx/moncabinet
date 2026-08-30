@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "_macros.html" import tableau_contacts %}
+{% block titre %}{{ titre }}{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('contacts.recherche') }}">&larr; Retour à la recherche</a></p>
+<h1>{{ titre }}</h1>
+
+<p>
+    <input type="text" id="recherche-q" data-qualite="{{ qualite }}"
+           placeholder="Nom, prénom ou raison sociale" size="40" autocomplete="off">
+</p>
+
+<div id="zone-resultats-contacts">
+{% if resultats %}
+    {{ tableau_contacts(resultats) }}
+{% else %}
+    <p>{{ message_vide }}</p>
+{% endif %}
+</div>
+
+<script src="{{ url_for('static', filename='js/filtre_contacts.js') }}"></script>
+{% endblock %}

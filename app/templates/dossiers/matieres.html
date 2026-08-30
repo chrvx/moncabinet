@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titre %}Matières{% endblock %}
+{% block contenu %}
+<h1>Matières</h1>
+<p>Réservé aux comptes avocat et collaborateur.</p>
+
+<ul>
+{% for m in matieres %}
+    <li{% if not m.actif %} style="opacity:0.6"{% endif %}>
+        {{ m.libelle }}{% if not m.actif %} (inactive){% endif %}
+        <form method="post" action="{{ url_for('dossiers.basculer_matiere', matiere_id=m.id) }}" style="display:inline">
+            <button type="submit">{{ "Réactiver" if not m.actif else "Désactiver" }}</button>
+        </form>
+    </li>
+{% endfor %}
+</ul>
+
+<h2>Nouvelle matière</h2>
+<form method="post" action="{{ url_for('dossiers.creer_matiere') }}">
+    {{ formulaire.hidden_tag() }}
+    {{ formulaire.libelle(size=32) }}
+    {{ formulaire.soumettre() }}
+</form>
+{% endblock %}

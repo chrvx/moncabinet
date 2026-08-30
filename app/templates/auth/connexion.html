@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% from "_macros.html" import champ %}
+{% block titre %}Connexion{% endblock %}
+{% block contenu %}
+<h1>Connexion</h1>
+<form method="post">
+    {{ formulaire.hidden_tag() }}
+    {{ champ(formulaire.nom) }}
+    {{ champ(formulaire.mot_de_passe) }}
+    {{ formulaire.soumettre() }}
+</form>
+{% endblock %}

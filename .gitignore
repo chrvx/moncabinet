@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+*.pyc
+.env
+yoyo.ini
+env.sh
+instance/
+data/
