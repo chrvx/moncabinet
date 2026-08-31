@@ -49,13 +49,21 @@ class AvocatAnnuaire:
     (avCnbfCode, avNom, avPrenom, etc. — voir le mapping dans
     _lire_ligne). code_cnbf est l'identifiant stable utilisé pour le
     rapprochement avec un avocat déjà enregistré (voir
-    app/repositories/qualifications.py::recuperer_avocat_par_code_cnbf)."""
+    app/repositories/qualifications.py::recuperer_avocat_par_code_cnbf).
+    genre reprend telle quelle la colonne "civilit" du CSV ("M"/"F"), qui
+    partage son codage avec personne_physique.genre (voir
+    app/blueprints/contacts/forms.py) — à ne pas confondre avec
+    civilite_id, toujours forcé à "ME" (Maître) pour un avocat (voir
+    qualifications.enregistrer_avocat) : c'est ce genre qui permettra
+    d'accorder correctement les courriers générés (confrère/consœur,
+    Monsieur/Madame...)."""
 
     code_cnbf: str
     barreau_libelle: str
     barreau_id_annuaire: str
     nom: str
     prenom: str
+    genre: str | None
     numero_voie: str | None
     libelle_voie: str | None
     adresse2: str | None
@@ -107,6 +115,7 @@ def _lire_ligne(ligne: dict) -> AvocatAnnuaire:
         barreau_id_annuaire=ligne["BarreauId"].strip(),
         nom=ligne["avNom"].strip(),
         prenom=ligne["avPrenom"].strip(),
+        genre=ligne.get("civilit") or None,
         numero_voie=numero_voie,
         libelle_voie=libelle_voie,
         adresse2=ligne.get("cbAdresse2") or None,

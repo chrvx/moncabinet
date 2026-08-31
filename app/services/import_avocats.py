@@ -76,6 +76,7 @@ def importer_ou_mettre_a_jour(
 
     personne = contacts.creer_personne_physique(
         avocat_annuaire.nom, utilisateur_id, prenom=avocat_annuaire.prenom,
+        genre=avocat_annuaire.genre,
     )
     qualifications.enregistrer_avocat(
         personne.contact_id, utilisateur_id,
