@@ -230,6 +230,27 @@ def lister_ouverts() -> list[Dossier]:
             return cur.fetchall()
 
 
+def lister_ouverts_recents(limite: int) -> list[Dossier]:
+    """Les dossiers ouverts les plus récemment modifiés — utilisé par le
+    tableau de bord d'accueil, où l'ordre par référence de lister_ouverts
+    n'est pas ce qu'on veut mettre en avant."""
+    with db.pool.connection() as conn:
+        with conn.cursor(row_factory=class_row(Dossier)) as cur:
+            cur.execute(
+                """
+                SELECT id, reference, statut, categorie, matiere_id,
+                       date_ouverture, date_cloture, cree_par, cree_le,
+                       modifie_par, modifie_le, numero_archive
+                FROM dossier
+                WHERE statut = 'ouvert'
+                ORDER BY coalesce(modifie_le, cree_le) DESC
+                LIMIT %s
+                """,
+                (limite,),
+            )
+            return cur.fetchall()
+
+
 def lister_clos() -> list[Dossier]:
     """Dossiers clôturés, triés par référence."""
     with db.pool.connection() as conn:

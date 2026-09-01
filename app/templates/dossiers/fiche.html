@@ -3,57 +3,76 @@
 {% block titre %}{{ dossier.reference or "Dossier en brouillon" }}{% endblock %}
 {% block contenu %}
 <p><a href="{{ url_for('dossiers.liste') }}">&larr; Retour aux dossiers</a></p>
-<h1>{{ dossier.reference or "(brouillon)" }} — {{ nom }}</h1>
-<p>Statut : <strong>{{ dossier.statut }}</strong>
-   {% if dossier.date_ouverture %} — ouvert le {{ dossier.date_ouverture }}{% endif %}
-   {% if dossier.date_cloture %} — clos le {{ dossier.date_cloture }}{% endif %}
-   {% if dossier.numero_archive %} — n° d'archive {{ dossier.numero_archive }}{% endif %}</p>
+
+<div class="entete-dossier">
+    <div>
+        <h1>{{ dossier.reference or "(brouillon)" }} — {{ nom }}</h1>
+        <p class="meta">
+            <span class="statut-pastille {{ dossier.statut }}">{{ dossier.statut | capitalize }}</span>
+            {% if dossier.date_ouverture %} &nbsp;ouvert le <strong>{{ dossier.date_ouverture }}</strong>{% endif %}
+            {% if dossier.date_cloture %} &nbsp;clos le <strong>{{ dossier.date_cloture }}</strong>{% endif %}
+            {% if dossier.numero_archive %} &nbsp;n° d'archive <strong>{{ dossier.numero_archive }}</strong>{% endif %}
+        </p>
+    </div>
+    {% if dossier.statut == "ouvert" %}
+        <form method="post" action="{{ url_for('dossiers.clore', dossier_id=dossier.id) }}"
+              onsubmit="return confirm('Clôturer ce dossier ? Plus aucune modification ne sera possible tant qu\'il ne sera pas rouvert.');">
+            <button type="submit">Clôturer le dossier</button>
+        </form>
+    {% elif dossier.statut == "clos" %}
+        <form method="post" action="{{ url_for('dossiers.rouvrir', dossier_id=dossier.id) }}">
+            <button type="submit">Rouvrir le dossier</button>
+        </form>
+    {% endif %}
+</div>
 
 {% if dossier.statut == "brouillon" %}
-    <h2>Ouvrir le dossier</h2>
-    <p>Numéro suggéré, modifiable si vous reprenez un dossier déjà en cours ailleurs.</p>
-    <form method="post" action="{{ url_for('dossiers.ouvrir', dossier_id=dossier.id) }}">
-        {{ formulaire_ouvrir.hidden_tag() }}
-        {{ formulaire_ouvrir.reference.label }}
-        {{ formulaire_ouvrir.reference(size=12) }}
-        {{ formulaire_ouvrir.soumettre() }}
-    </form>
-{% elif dossier.statut == "ouvert" %}
-    <form method="post" action="{{ url_for('dossiers.clore', dossier_id=dossier.id) }}"
-          onsubmit="return confirm('Clôturer ce dossier ? Plus aucune modification ne sera possible tant qu\'il ne sera pas rouvert.');">
-        <button type="submit">Clôturer le dossier</button>
-    </form>
+    <div class="carte">
+        <h2>Ouvrir le dossier</h2>
+        <p class="aide">Numéro suggéré, modifiable si vous reprenez un dossier déjà en cours ailleurs.</p>
+        <form method="post" action="{{ url_for('dossiers.ouvrir', dossier_id=dossier.id) }}">
+            {{ formulaire_ouvrir.hidden_tag() }}
+            {{ formulaire_ouvrir.reference.label }}
+            {{ formulaire_ouvrir.reference(size=12) }}
+            {{ formulaire_ouvrir.soumettre() }}
+        </form>
+    </div>
 {% elif dossier.statut == "clos" %}
     <p class="aide">Ce dossier est clos : aucune action n'est possible à part le rouvrir.</p>
-    <form method="post" action="{{ url_for('dossiers.rouvrir', dossier_id=dossier.id) }}">
-        <button type="submit">Rouvrir le dossier</button>
-    </form>
 {% endif %}
 
-<h2>Informations</h2>
-{% if dossier.statut == "clos" %}
-    <p>{{ formulaire_modif.categorie.label }} : {{ dossier.categorie or "—" }}</p>
-    <p>{{ formulaire_modif.matiere_id.label }} : {{ libelle_selection(formulaire_modif.matiere_id) or "—" }}</p>
-{% else %}
+<div class="carte carte-resume-dossier">
+    <div class="grille-info">
+        <p><strong>Catégorie</strong>{{ dossier.categorie or "—" }}</p>
+        <p><strong>Matière</strong>{{ libelle_selection(formulaire_modif.matiere_id) or "—" }}</p>
+        <p><strong>Numéro d'archive</strong>{{ dossier.numero_archive or "—" }}</p>
+    </div>
+    {% if dossier.statut != "clos" %}
+    <details>
+    <summary>Modifier</summary>
     <form method="post" action="{{ url_for('dossiers.modifier', dossier_id=dossier.id) }}">
         {{ formulaire_modif.hidden_tag() }}
         <p>{{ formulaire_modif.categorie.label }} {{ formulaire_modif.categorie() }}</p>
         <p>{{ formulaire_modif.matiere_id.label }} {{ formulaire_modif.matiere_id() }}</p>
         {{ formulaire_modif.soumettre() }}
     </form>
-{% endif %}
+    </details>
+    {% endif %}
+</div>
 
-<h2>Intervenants</h2>
-{% if intervenants_groupes %}
-    <ul>
-    {% for groupe in intervenants_groupes %}
+{% macro colonne_partie(titre, classe, groupes) %}
+<div class="partie">
+    <h3 class="partie-titre {{ classe }}">{{ titre }}</h3>
+    {% if groupes %}
+    <ul class="liste-partie">
+    {% for groupe in groupes %}
         <li>
             <a href="{{ url_for('contacts.fiche', contact_id=groupe.contact_id) }}">{{ groupe.nom_contact }}</a>
-            <ul>
+            <ul class="roles-contact">
             {% for i in groupe.roles %}
                 <li>
-                    {{ i.role_libelle }}
-                    {% if i.nom_contact_lie %}(lié à {{ i.nom_contact_lie }}){% endif %}
+                    <span class="role-badge {{ i.role_classe }}">{{ i.role_libelle }}</span>
+                    {% if i.nom_contact_lie %}<span class="aide">(lié à {{ i.nom_contact_lie }})</span>{% endif %}
                     {% if dossier.statut != "clos" %}
                         <form method="post" action="{{ url_for('dossiers.retirer_intervenant', dossier_id=dossier.id, role_contact_id=i.role_contact_id) }}" style="display:inline">
                             <button type="submit">Retirer</button>
@@ -63,7 +82,7 @@
             {% endfor %}
             </ul>
             {% if dossier.statut != "clos" %}
-                <details style="display:inline-block">
+                <details>
                 <summary>Ajouter un rôle à ce contact</summary>
                 <form method="post" action="{{ url_for('dossiers.ajouter_role', dossier_id=dossier.id, contact_id=groupe.contact_id) }}">
                     {{ formulaire_role.hidden_tag() }}
@@ -76,46 +95,61 @@
         </li>
     {% endfor %}
     </ul>
-{% else %}
-    <p>Aucun intervenant.</p>
-{% endif %}
+    {% else %}
+    <p class="aide" style="padding: 0.8rem 1.1rem;">Aucun intervenant.</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<h2>Intervenants</h2>
+<div class="intervenants-parties">
+    {{ colonne_partie("Notre partie", "notre", intervenants_par_camp.notre_partie) }}
+    {{ colonne_partie("Partie adverse", "adverse", intervenants_par_camp.partie_adverse) }}
+    {% if intervenants_par_camp.autres %}
+        {{ colonne_partie("Autres intervenants", "autre", intervenants_par_camp.autres) }}
+    {% endif %}
+</div>
 
 {% if dossier.statut != "clos" %}
-    <h3>Ajouter un nouvel intervenant</h3>
-    <form method="post" action="{{ url_for('dossiers.ajouter_intervenant', dossier_id=dossier.id) }}">
-        {{ formulaire_intervenant.hidden_tag() }}
-        {{ formulaire_intervenant.contact_id() }}
-        <p>
-            <label>Contact</label><br>
-            <input type="text" id="intervenant-recherche" placeholder="Nom du contact"
-                   data-suggestions="intervenant-suggestions" data-mode="selectionner"
-                   data-cible-id="{{ formulaire_intervenant.contact_id.id }}" autocomplete="off">
-            <span id="intervenant-suggestions"></span>
-        </p>
-        <p>{{ formulaire_intervenant.type_role_id.label }} {{ formulaire_intervenant.type_role_id() }}</p>
-        <p>{{ formulaire_intervenant.contact_lie_id.label }} {{ formulaire_intervenant.contact_lie_id() }}</p>
-        {{ formulaire_intervenant.soumettre() }}
-    </form>
+<details>
+<summary>Ajouter un nouvel intervenant</summary>
+<form method="post" action="{{ url_for('dossiers.ajouter_intervenant', dossier_id=dossier.id) }}">
+    {{ formulaire_intervenant.hidden_tag() }}
+    {{ formulaire_intervenant.contact_id() }}
+    <p>
+        <label>Contact</label><br>
+        <input type="text" id="intervenant-recherche" placeholder="Nom du contact"
+               data-suggestions="intervenant-suggestions" data-mode="selectionner"
+               data-cible-id="{{ formulaire_intervenant.contact_id.id }}" autocomplete="off">
+        <span id="intervenant-suggestions"></span>
+    </p>
+    <p>{{ formulaire_intervenant.type_role_id.label }} {{ formulaire_intervenant.type_role_id() }}</p>
+    <p>{{ formulaire_intervenant.contact_lie_id.label }} {{ formulaire_intervenant.contact_lie_id() }}</p>
+    {{ formulaire_intervenant.soumettre() }}
+</form>
+</details>
 {% endif %}
 
 <h2>Documents</h2>
 {% if documents %}
-    <ul>
-    {% for document in documents %}
-        <li>
-            {{ document.titre }} — {{ document.cree_le.strftime('%d/%m/%Y %H:%M') }}
-            (<a href="{{ url_for('documents.telecharger_pdf', dossier_id=dossier.id, document_id=document.id) }}">PDF</a>,
-             <a href="{{ url_for('documents.telecharger_typ', dossier_id=dossier.id, document_id=document.id) }}">source .typ</a>)
-        </li>
-    {% endfor %}
-    </ul>
+<ul class="liste-documents">
+{% for document in documents %}
+    <li>
+        <span>{{ document.titre }} <span class="date-doc">— {{ document.cree_le.strftime('%d/%m/%Y %H:%M') }}</span></span>
+        <span class="liens-doc">
+            <a href="{{ url_for('documents.telecharger_pdf', dossier_id=dossier.id, document_id=document.id) }}">PDF</a>
+            <a href="{{ url_for('documents.telecharger_typ', dossier_id=dossier.id, document_id=document.id) }}">source .typ</a>
+        </span>
+    </li>
+{% endfor %}
+</ul>
 {% else %}
-    <p>Aucun document généré.</p>
+    <p class="aide">Aucun document généré.</p>
 {% endif %}
 
 {% if dossier.statut != "clos" %}
     {% if modeles_documents %}
-        <form method="get" action="{{ url_for('documents.nouveau', dossier_id=dossier.id) }}">
+        <form method="get" action="{{ url_for('documents.nouveau', dossier_id=dossier.id) }}" class="generer-document">
             <select name="modele">
                 {% for modele in modeles_documents %}
                     <option value="{{ modele.slug }}">{{ modele.libelle }}</option>

@@ -243,6 +243,13 @@ def recuperer_contact(contact_id: int) -> Contact | None:
             return cur.fetchone()
 
 
+def compter() -> int:
+    with db.pool.connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM contact")
+            return cur.fetchone()[0]
+
+
 def rechercher_par_nom(terme: str) -> list[ResultatRecherche]:
     """Recherche anti-conflit d'intérêts : balaie personnes physiques et
     morales sans distinction, sur tous les noms possibles d'une personne

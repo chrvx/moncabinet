@@ -35,6 +35,30 @@ def _bloquer_si_clos(dossier_id):
     return None
 
 
+ROLES_NOTRE_PARTIE = {"client"}
+ROLES_PARTIE_ADVERSE = {"adversaire"}
+ROLES_AVOCAT_OU_LIE = {"avocat", "enfant"}
+# demandeur/défendeur sont des positions procédurales, indépendantes de la
+# qualité de client ou d'adversaire (le cabinet peut représenter l'un ou
+# l'autre) : elles ne déterminent donc pas de camp, contrairement à
+# client/adversaire ci-dessus. Un contact qui ne porte que ce rôle atterrit
+# dans "autres" (voir _repartir_par_camp).
+
+
+def _classe_role(libelle: str) -> str:
+    """Classe CSS du badge de rôle affiché sur la fiche dossier — purement
+    cosmétique (voir role-badge dans style.css), donc un rôle non reconnu
+    (type_role étant un vocabulaire ouvert, voir migrations/0004) obtient
+    simplement un badge neutre plutôt qu'une erreur."""
+    if libelle in ROLES_NOTRE_PARTIE:
+        return "client"
+    if libelle in ROLES_PARTIE_ADVERSE:
+        return "adverse"
+    if libelle in ROLES_AVOCAT_OU_LIE:
+        return "avocat"
+    return ""
+
+
 def _grouper_intervenants(intervenants):
     """Regroupe les lignes role_contact par contact : un même contact peut
     porter plusieurs rôles sur un même dossier (ex: client ET demandeur)
@@ -45,6 +69,7 @@ def _grouper_intervenants(intervenants):
     ordre = []
     for i in intervenants:
         contact_id = i["contact_id"]
+        i["role_classe"] = _classe_role(i["role_libelle"])
         if contact_id not in groupes:
             groupes[contact_id] = {
                 "contact_id": contact_id,
@@ -54,6 +79,49 @@ def _grouper_intervenants(intervenants):
             ordre.append(contact_id)
         groupes[contact_id]["roles"].append(i)
     return sorted((groupes[cid] for cid in ordre), key=lambda g: g["nom_contact"])
+
+
+def _repartir_par_camp(groupes):
+    """Répartit les intervenants (déjà groupés par contact, voir
+    _grouper_intervenants) en deux camps pour l'affichage de la fiche
+    dossier : notre partie et la partie adverse. Un contact qui porte
+    directement le rôle client fixe son camp à notre partie, adversaire à
+    la partie adverse ; un rôle lié à un autre contact du dossier (avocat,
+    enfant) hérite du camp de ce contact — potentiellement en chaîne. Un
+    intervenant dont le camp ne se déduit pas ainsi (rôle procédural comme
+    demandeur/défendeur sans lien, contact non lié, ou lié à un contact
+    lui-même non classé) atterrit dans "autres" plutôt que d'être forcé
+    dans l'un des deux camps : demandeur/défendeur sont des positions
+    procédurales indépendantes de la qualité de client ou d'adversaire
+    (le cabinet peut représenter l'un ou l'autre), et type_role est de
+    toute façon un vocabulaire ouvert (voir migrations/0004) — de nouveaux
+    rôles comme "témoin" ou "notaire" n'ont pas vocation à choisir un
+    camp."""
+    camps = {}
+    for groupe in groupes:
+        libelles = {r["role_libelle"] for r in groupe["roles"]}
+        if libelles & ROLES_NOTRE_PARTIE:
+            camps[groupe["contact_id"]] = "notre_partie"
+        elif libelles & ROLES_PARTIE_ADVERSE:
+            camps[groupe["contact_id"]] = "partie_adverse"
+
+    changement = True
+    while changement:
+        changement = False
+        for groupe in groupes:
+            if groupe["contact_id"] in camps:
+                continue
+            for role in groupe["roles"]:
+                camp_lie = camps.get(role["contact_lie_id"])
+                if camp_lie:
+                    camps[groupe["contact_id"]] = camp_lie
+                    changement = True
+                    break
+
+    resultat = {"notre_partie": [], "partie_adverse": [], "autres": []}
+    for groupe in groupes:
+        resultat[camps.get(groupe["contact_id"], "autres")].append(groupe)
+    return resultat
 
 
 def _preparer_formulaire_role(intervenants):
@@ -175,6 +243,7 @@ def fiche(dossier_id):
     ]
 
     intervenants_groupes = _grouper_intervenants(intervenants)
+    intervenants_par_camp = _repartir_par_camp(intervenants_groupes)
     formulaire_role = _preparer_formulaire_role(intervenants)
 
     return render_template(
@@ -182,6 +251,7 @@ def fiche(dossier_id):
         dossier=dossier,
         nom=nom,
         intervenants_groupes=intervenants_groupes,
+        intervenants_par_camp=intervenants_par_camp,
         formulaire_ouvrir=formulaire_ouvrir,
         formulaire_modif=formulaire_modif,
         formulaire_intervenant=formulaire_intervenant,

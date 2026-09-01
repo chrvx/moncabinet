@@ -1,8 +1,52 @@
 {% extends "base.html" %}
 {% block titre %}Mon Cabinet — Accueil{% endblock %}
 {% block contenu %}
-<h1>Accueil</h1>
+<div class="entete-page">
+    <div>
+        <h1>Bonjour, {{ current_user.nom }}</h1>
+    </div>
+</div>
 
+<div class="grille-stats">
+    <div class="stat">
+        <span class="stat-icone i-succes">
+            <svg viewBox="0 0 24 24"><path d="M4 7h5l1.5 2H20v10H4z"/></svg>
+        </span>
+        <span class="stat-texte">
+            <span class="stat-valeur">{{ nb_dossiers_ouverts }}</span>
+            <span class="stat-libelle">Dossiers ouverts</span>
+        </span>
+    </div>
+    <div class="stat">
+        <span class="stat-icone i-avertissement">
+            <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </span>
+        <span class="stat-texte">
+            <span class="stat-valeur">{{ nb_dossiers_brouillons }}</span>
+            <span class="stat-libelle">Dossiers en brouillon</span>
+        </span>
+    </div>
+    <div class="stat">
+        <span class="stat-icone i-primaire">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-3.8 4-5.8 7-5.8s6 2 7 5.8"/></svg>
+        </span>
+        <span class="stat-texte">
+            <span class="stat-valeur">{{ nb_contacts }}</span>
+            <span class="stat-libelle">Contacts enregistrés</span>
+        </span>
+    </div>
+    <div class="stat">
+        <span class="stat-icone i-neutre">
+            <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v4h5M9 12h7M9 16h7"/></svg>
+        </span>
+        <span class="stat-texte">
+            <span class="stat-valeur">{{ nb_documents_ce_mois }}</span>
+            <span class="stat-libelle">Documents générés ce mois-ci</span>
+        </span>
+    </div>
+</div>
+
+<h2 class="titre-section">Accès rapide</h2>
 <div class="grille-tuiles">
     <a class="tuile" href="{{ url_for('contacts.recherche') }}">
         <span class="tuile-icone">
@@ -35,5 +79,50 @@
     {% endif %}
 </div>
 
-<p class="aide">Connexion à PostgreSQL vérifiée — version détectée : <code>{{ version_postgres }}</code></p>
+<div class="grille-bas">
+    <div>
+        <h2 class="titre-section">
+            Dossiers récents
+            <a href="{{ url_for('dossiers.liste') }}">Tout voir &rarr;</a>
+        </h2>
+        {% if dossiers_recents %}
+        <table>
+            <thead><tr><th>Référence</th><th>Nom</th><th>Matière</th><th>Statut</th></tr></thead>
+            <tbody>
+            {% for d, nom in dossiers_recents %}
+                <tr>
+                    <td><a href="{{ url_for('dossiers.fiche', dossier_id=d.id) }}">{{ d.reference }}</a></td>
+                    <td>{{ nom }}</td>
+                    <td>{{ matiere_libelles.get(d.matiere_id, "—") }}</td>
+                    <td><span class="statut-puce">Ouvert</span></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="aide">Aucun dossier ouvert pour l'instant.</p>
+        {% endif %}
+    </div>
+    <div>
+        <h2 class="titre-section">Documents récents</h2>
+        {% if documents_recents %}
+        <ul class="liste-activite">
+        {% for document, reference in documents_recents %}
+            <li>
+                <span class="puce-activite">
+                    <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v4h5M9 12h7M9 16h7"/></svg>
+                </span>
+                <span class="texte-activite">
+                    {{ document.titre }}
+                    {% if reference %}pour <strong>{{ reference }}</strong>{% endif %}
+                    <time>{{ document.cree_le.strftime('%d/%m/%Y %H:%M') }}</time>
+                </span>
+            </li>
+        {% endfor %}
+        </ul>
+        {% else %}
+        <p class="aide">Aucun document généré pour l'instant.</p>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

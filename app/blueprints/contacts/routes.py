@@ -385,6 +385,32 @@ def _preparer_formulaire_physique(personne):
     return formulaire
 
 
+ROLES_NOTRE_PARTIE = {"client", "demandeur"}
+ROLES_PARTIE_ADVERSE = {"adversaire", "défendeur"}
+
+
+def _initiales(contact, personne) -> str:
+    if contact.type_contact == "personne_physique":
+        return ((personne.prenom[:1] if personne.prenom else "") + personne.nom[:1]).upper()
+    mots = personne.raison_sociale.split()
+    return "".join(m[0] for m in mots[:2]).upper() or "?"
+
+
+def _badge_qualite(dossiers_du_contact, est_avocat) -> tuple[str, str] | tuple[None, None]:
+    """Résume en une étiquette la qualité la plus significative de ce
+    contact, à partir des rôles qu'il tient dans ses dossiers — affichée
+    sur la carte d'identité. Un contact qui n'est ni client, ni partie
+    adverse, ni avocat déclaré n'a simplement pas d'étiquette."""
+    roles = {role_libelle for _, role_libelle in dossiers_du_contact}
+    if roles & ROLES_NOTRE_PARTIE:
+        return "Client", "client"
+    if roles & ROLES_PARTIE_ADVERSE:
+        return "Partie adverse", "adverse"
+    if est_avocat:
+        return "Avocat", "avocat"
+    return None, None
+
+
 def _preparer_formulaire_correction_adresse(adresse, lien):
     """Formulaire de correction pré-rempli pour une adresse donnée, préfixé
     par l'id du lien pour que chaque adresse active du contact ait son
@@ -514,6 +540,7 @@ def fiche(contact_id):
                 partage_resultats.append((r, adresses_autre))
 
     est_avocat = profession_actuelle == "avocat"
+    badge_libelle, badge_classe = _badge_qualite(dossiers_du_contact, est_avocat)
 
     return render_template(
         "contacts/fiche.html",
@@ -521,6 +548,11 @@ def fiche(contact_id):
         contact=contact,
         personne=personne,
         titre=titre,
+        initiales=_initiales(contact, personne),
+        badge_libelle=badge_libelle,
+        badge_classe=badge_classe,
+        nb_dossiers_ouverts=sum(1 for d, _ in dossiers_du_contact if d.statut == "ouvert"),
+        nb_dossiers_clos=sum(1 for d, _ in dossiers_du_contact if d.statut == "clos"),
         formulaire_modif=formulaire_modif,
         formulaire_adresse=formulaire_adresse,
         formulaire_telephone=formulaire_telephone,

@@ -8,6 +8,76 @@
 <div class="disposition-fiche">
 <div class="colonne">
 
+<div class="carte carte-identite">
+    <div class="identite-entete">
+        <span class="avatar-identite">{{ initiales }}</span>
+        <div>
+            <p class="identite-nom">{{ titre }}</p>
+            {% if badge_libelle %}<span class="role-badge {{ badge_classe }}">{{ badge_libelle }}</span>{% endif %}
+        </div>
+    </div>
+
+    <div class="identite-champs">
+        {% if contact.type_contact == "personne_physique" %}
+            {% if not est_avocat and personne.profession %}
+                <p><strong>Profession</strong>{{ personne.profession }}</p>
+            {% endif %}
+        {% else %}
+            {% if personne.forme %}<p><strong>Forme juridique</strong>{{ personne.forme }}</p>{% endif %}
+        {% endif %}
+        {% if emails %}<p><strong>Email</strong><a href="mailto:{{ emails[0][0].adresse_email }}">{{ emails[0][0].adresse_email }}</a></p>{% endif %}
+        {% if telephones %}<p><strong>Téléphone</strong>{{ telephones[0][0].numero }}</p>{% endif %}
+        {% if adresses %}
+            <p><strong>Adresse</strong>
+                {% set a = adresses[0][0] %}
+                {% if a.numero_voie %}{{ a.numero_voie }} {% endif %}{{ a.libelle_voie }}, {{ a.code_postal }} {{ a.commune }}
+            </p>
+        {% endif %}
+        {% if not emails and not telephones and not adresses %}
+            <p class="aide">Aucune coordonnée enregistrée.</p>
+        {% endif %}
+    </div>
+
+    <div class="identite-stats">
+        <div><span class="valeur">{{ nb_dossiers_ouverts }}</span><span class="libelle">Dossier{{ "s" if nb_dossiers_ouverts != 1 }} ouvert{{ "s" if nb_dossiers_ouverts != 1 }}</span></div>
+        <div><span class="valeur">{{ nb_dossiers_clos }}</span><span class="libelle">Dossier{{ "s" if nb_dossiers_clos != 1 }} clos</span></div>
+    </div>
+</div>
+
+</div>
+<div class="colonne">
+
+<div class="carte">
+<h2>Dossiers</h2>
+{% if dossiers_du_contact %}
+    <ul>
+    {% for d, role_libelle in dossiers_du_contact %}
+        <li>
+            <a href="{{ url_for('dossiers.fiche', dossier_id=d.id) }}">
+                {{ d.reference or "(brouillon)" }}
+            </a>
+            — {{ role_libelle }} — {{ d.statut }}
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>Aucun dossier pour ce contact.</p>
+{% endif %}
+<form method="post" action="{{ url_for('dossiers.nouveau') }}">
+    {{ formulaire_nouveau_dossier.hidden_tag() }}
+    {{ formulaire_nouveau_dossier.contact_id() }}
+    {{ formulaire_nouveau_dossier.soumettre() }}
+</form>
+</div>
+
+</div>
+</div>
+
+<details class="carte">
+<summary>Modifier les informations</summary>
+<div class="disposition-fiche">
+<div class="colonne">
+
 <div class="carte">
 <h2>Informations</h2>
 {% if contact.type_contact == "personne_physique" %}
@@ -407,31 +477,9 @@
 </details>
 </div>
 
-<div class="carte">
-<h2>Dossiers</h2>
-{% if dossiers_du_contact %}
-    <ul>
-    {% for d, role_libelle in dossiers_du_contact %}
-        <li>
-            <a href="{{ url_for('dossiers.fiche', dossier_id=d.id) }}">
-                {{ d.reference or "(brouillon)" }}
-            </a>
-            — {{ role_libelle }} — {{ d.statut }}
-        </li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>Aucun dossier pour ce contact.</p>
-{% endif %}
-<form method="post" action="{{ url_for('dossiers.nouveau') }}">
-    {{ formulaire_nouveau_dossier.hidden_tag() }}
-    {{ formulaire_nouveau_dossier.contact_id() }}
-    {{ formulaire_nouveau_dossier.soumettre() }}
-</form>
-</div>
-
 </div>
 </div>
+</details>
 
 <script src="{{ url_for('static', filename='js/adresse.js') }}"></script>
 <script src="{{ url_for('static', filename='js/recherche_contact.js') }}"></script>
