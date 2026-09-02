@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import HiddenField, SelectField, StringField, SubmitField
+from wtforms import DateField, HiddenField, SelectField, StringField, SubmitField, TimeField
 from wtforms.validators import DataRequired, Optional
 
 
@@ -35,6 +35,35 @@ class AjouterIntervenantForm(FlaskForm):
         "Contact lié (si le rôle l'exige)", validators=[Optional()]
     )
     soumettre = SubmitField("Ajouter au dossier")
+
+
+class EcheanceForm(FlaskForm):
+    """Sert à la fois pour ajouter une échéance et pour la modifier. Les
+    choix de categorie_id sont peuplés dynamiquement dans la route depuis
+    categories_echeance (table de référence éditable), comme matiere_id
+    pour ModifierDossierForm."""
+
+    categorie_id = SelectField("Catégorie", validators=[DataRequired()])
+    libelle = StringField("Libellé", validators=[DataRequired(message="Ce champ est requis.")])
+    date_echeance = DateField("Date", validators=[DataRequired(message="Ce champ est requis.")])
+    heure_echeance = TimeField("Heure (facultatif)", validators=[Optional()])
+    notes = StringField("Notes", validators=[Optional()])
+    soumettre = SubmitField("Enregistrer")
+
+
+class AjouterModeleEcheanceForm(FlaskForm):
+    """Instanciation d'un modèle d'échéance suggéré : mêmes champs que
+    EcheanceForm, pré-remplis depuis le modèle (libellé, catégorie, date
+    calculée à partir de la date d'ouverture) mais modifiables avant
+    enregistrement — notamment la date, quand le point de départ réel
+    diffère de l'ouverture du dossier (ex: date de la déclaration d'appel)."""
+
+    modele_id = HiddenField(validators=[DataRequired()])
+    categorie_id = SelectField("Catégorie", validators=[DataRequired()])
+    libelle = StringField("Libellé", validators=[DataRequired(message="Ce champ est requis.")])
+    date_echeance = DateField("Date", validators=[DataRequired(message="Ce champ est requis.")])
+    heure_echeance = TimeField("Heure (facultatif)", validators=[Optional()])
+    soumettre = SubmitField("Ajouter cette échéance")
 
 
 class AjouterRoleForm(FlaskForm):

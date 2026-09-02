@@ -44,6 +44,15 @@
             <span class="stat-libelle">Documents générés ce mois-ci</span>
         </span>
     </div>
+    <div class="stat">
+        <span class="stat-icone i-avertissement">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        </span>
+        <span class="stat-texte">
+            <span class="stat-valeur">{{ nb_echeances_a_venir }}</span>
+            <span class="stat-libelle">Échéances à venir</span>
+        </span>
+    </div>
 </div>
 
 <h2 class="titre-section">Accès rapide</h2>
@@ -125,4 +134,26 @@
         {% endif %}
     </div>
 </div>
+
+<h2 class="titre-section">Échéances à venir</h2>
+{% if echeances_a_venir %}
+<ul class="liste-activite">
+{% for echeance, reference, nom in echeances_a_venir %}
+    <li{% if echeance.date_echeance < aujourd_hui %} class="echeance-retard"{% endif %}>
+        <span class="puce-activite">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        </span>
+        <span class="texte-activite">
+            {{ echeance.libelle }}
+            pour <a href="{{ url_for('dossiers.fiche', dossier_id=echeance.dossier_id) }}"><strong>{{ reference }} — {{ nom }}</strong></a>
+            <time>
+                {{ echeance.date_echeance.strftime('%d/%m/%Y') }}{% if echeance.heure_echeance %} — {{ echeance.heure_echeance.strftime('%Hh%M') }}{% endif %}
+            </time>
+        </span>
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+    <p class="aide">Aucune échéance à venir.</p>
+{% endif %}
 {% endblock %}

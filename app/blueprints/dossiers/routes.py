@@ -1,16 +1,22 @@
+from datetime import date, timedelta
+
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from psycopg.errors import UniqueViolation
 
 from app.blueprints.dossiers.forms import (
     AjouterIntervenantForm,
+    AjouterModeleEcheanceForm,
     AjouterRoleForm,
+    EcheanceForm,
     ModifierDossierForm,
     NouveauDossierForm,
     OuvrirDossierForm,
 )
+from app.repositories import categories_echeance
 from app.repositories import documents as documents_repo
-from app.repositories import dossiers, matieres, reference
+from app.repositories import echeances as echeances_repo
+from app.repositories import dossiers, matieres, reference, utilisateurs
 from app.repositories.roles import RegleRoleViolee, attribuer_role, retirer_role
 from app.securite import role_requis
 from app.services import modeles_documents
@@ -246,6 +252,44 @@ def fiche(dossier_id):
     intervenants_par_camp = _repartir_par_camp(intervenants_groupes)
     formulaire_role = _preparer_formulaire_role(intervenants)
 
+    categorie_choix = [(c.id, c.libelle) for c in categories_echeance.lister()]
+
+    echeances = echeances_repo.lister_pour_dossier(dossier_id)
+    formulaire_echeance = EcheanceForm()
+    formulaire_echeance.categorie_id.choices = categorie_choix
+    formulaires_echeances = {}
+    for e in echeances:
+        formulaire_modif_echeance = EcheanceForm(
+            categorie_id=e.categorie_id,
+            libelle=e.libelle,
+            date_echeance=e.date_echeance,
+            heure_echeance=e.heure_echeance,
+            notes=e.notes,
+        )
+        formulaire_modif_echeance.categorie_id.choices = categorie_choix
+        formulaires_echeances[e.id] = formulaire_modif_echeance
+
+    modeles_suggeres = []
+    formulaires_modeles = {}
+    if dossier.matiere_id and dossier.statut != "clos":
+        modeles_suggeres = echeances_repo.lister_modeles_non_instancies(
+            dossier_id, dossier.matiere_id
+        )
+        for m in modeles_suggeres:
+            date_calculee = (
+                dossier.date_ouverture + timedelta(days=m.delai_jours)
+                if dossier.date_ouverture
+                else None
+            )
+            formulaire_suggestion = AjouterModeleEcheanceForm(
+                modele_id=m.id,
+                categorie_id=m.categorie_id,
+                libelle=m.libelle,
+                date_echeance=date_calculee,
+            )
+            formulaire_suggestion.categorie_id.choices = categorie_choix
+            formulaires_modeles[m.id] = formulaire_suggestion
+
     return render_template(
         "dossiers/fiche.html",
         dossier=dossier,
@@ -258,6 +302,14 @@ def fiche(dossier_id):
         formulaire_role=formulaire_role,
         documents=documents_repo.lister_pour_dossier(dossier_id),
         modeles_documents=modeles_documents.lister(),
+        echeances=echeances,
+        formulaire_echeance=formulaire_echeance,
+        formulaires_echeances=formulaires_echeances,
+        modeles_suggeres=modeles_suggeres,
+        formulaires_modeles=formulaires_modeles,
+        categorie_libelles={c.id: c.libelle for c in categories_echeance.lister(actives_seulement=False)},
+        utilisateur_noms={u.id: u.nom for u in utilisateurs.lister()},
+        aujourd_hui=date.today(),
     )
 
 
@@ -392,4 +444,106 @@ def retirer_intervenant(dossier_id, role_contact_id):
         flash("Intervenant retiré du dossier.", "succes")
     except RegleRoleViolee as e:
         flash(str(e), "erreur")
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+# --- Échéances ---------------------------------------------------------------
+
+
+@bp.route("/<int:dossier_id>/echeances", methods=["POST"])
+@login_required
+def ajouter_echeance(dossier_id):
+    blocage = _bloquer_si_clos(dossier_id)
+    if blocage:
+        return blocage
+    formulaire = EcheanceForm()
+    formulaire.categorie_id.choices = [(c.id, c.libelle) for c in categories_echeance.lister()]
+    if formulaire.validate_on_submit():
+        echeances_repo.creer(
+            dossier_id=dossier_id,
+            categorie_id=int(formulaire.categorie_id.data),
+            libelle=formulaire.libelle.data,
+            date_echeance=formulaire.date_echeance.data,
+            heure_echeance=formulaire.heure_echeance.data,
+            notes=formulaire.notes.data or None,
+            utilisateur_id=current_user.id,
+        )
+        flash("Échéance ajoutée.", "succes")
+    else:
+        flash("Le formulaire contient des erreurs.", "erreur")
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+@bp.route("/<int:dossier_id>/echeances/<int:echeance_id>/modifier", methods=["POST"])
+@login_required
+def modifier_echeance(dossier_id, echeance_id):
+    blocage = _bloquer_si_clos(dossier_id)
+    if blocage:
+        return blocage
+    formulaire = EcheanceForm()
+    formulaire.categorie_id.choices = [(c.id, c.libelle) for c in categories_echeance.lister()]
+    if formulaire.validate_on_submit():
+        echeances_repo.modifier(
+            echeance_id=echeance_id,
+            categorie_id=int(formulaire.categorie_id.data),
+            libelle=formulaire.libelle.data,
+            date_echeance=formulaire.date_echeance.data,
+            heure_echeance=formulaire.heure_echeance.data,
+            notes=formulaire.notes.data or None,
+            utilisateur_id=current_user.id,
+        )
+        flash("Échéance mise à jour.", "succes")
+    else:
+        flash("Le formulaire contient des erreurs.", "erreur")
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+@bp.route("/<int:dossier_id>/echeances/<int:echeance_id>/fait", methods=["POST"])
+@login_required
+def marquer_echeance_fait(dossier_id, echeance_id):
+    echeances_repo.marquer_fait(echeance_id, current_user.id)
+    flash("Échéance marquée comme faite.", "succes")
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+@bp.route("/<int:dossier_id>/echeances/<int:echeance_id>/a-faire", methods=["POST"])
+@login_required
+def marquer_echeance_a_faire(dossier_id, echeance_id):
+    echeances_repo.marquer_a_faire(echeance_id, current_user.id)
+    flash("Échéance remise à faire.", "succes")
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+@bp.route("/<int:dossier_id>/echeances/<int:echeance_id>/supprimer", methods=["POST"])
+@login_required
+def supprimer_echeance(dossier_id, echeance_id):
+    blocage = _bloquer_si_clos(dossier_id)
+    if blocage:
+        return blocage
+    echeances_repo.supprimer(echeance_id)
+    flash("Échéance supprimée.", "succes")
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+@bp.route("/<int:dossier_id>/echeances/modeles/<int:modele_id>", methods=["POST"])
+@login_required
+def ajouter_echeance_depuis_modele(dossier_id, modele_id):
+    blocage = _bloquer_si_clos(dossier_id)
+    if blocage:
+        return blocage
+    formulaire = AjouterModeleEcheanceForm()
+    formulaire.categorie_id.choices = [(c.id, c.libelle) for c in categories_echeance.lister()]
+    if formulaire.validate_on_submit():
+        echeances_repo.creer(
+            dossier_id=dossier_id,
+            categorie_id=int(formulaire.categorie_id.data),
+            libelle=formulaire.libelle.data,
+            date_echeance=formulaire.date_echeance.data,
+            heure_echeance=formulaire.heure_echeance.data,
+            notes=None,
+            utilisateur_id=current_user.id,
+        )
+        flash("Échéance ajoutée.", "succes")
+    else:
+        flash("Le formulaire contient des erreurs.", "erreur")
     return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))

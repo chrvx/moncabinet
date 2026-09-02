@@ -130,6 +130,104 @@
 </details>
 {% endif %}
 
+<h2>Échéances</h2>
+
+{% if modeles_suggeres %}
+<div class="carte carte-suggestions">
+    <h3>Échéances suggérées pour cette matière</h3>
+    <ul class="liste-suggestions">
+    {% for modele in modeles_suggeres %}
+        {% set formulaire_suggestion = formulaires_modeles[modele.id] %}
+        <li>
+            <form method="post" action="{{ url_for('dossiers.ajouter_echeance_depuis_modele', dossier_id=dossier.id, modele_id=modele.id) }}">
+                {{ formulaire_suggestion.hidden_tag() }}
+                {{ formulaire_suggestion.modele_id() }}
+                {{ formulaire_suggestion.categorie_id() }}
+                <span class="suggestion-libelle">{{ formulaire_suggestion.libelle(size=28) }}</span>
+                {{ formulaire_suggestion.date_echeance() }}
+                {{ formulaire_suggestion.heure_echeance() }}
+                {{ formulaire_suggestion.soumettre() }}
+            </form>
+        </li>
+    {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if echeances %}
+<ul class="liste-echeances">
+{% for e in echeances %}
+    {% set en_retard = e.statut == "a_faire" and e.date_echeance < aujourd_hui %}
+    <li{% if en_retard %} class="echeance-retard"{% endif %}>
+        <div class="echeance-ligne">
+            <span class="categorie-badge">{{ categorie_libelles.get(e.categorie_id, "—") }}</span>
+            <span class="echeance-libelle{% if e.statut == 'fait' %} echeance-faite{% endif %}">{{ e.libelle }}</span>
+            <span class="date-echeance">
+                {{ e.date_echeance.strftime('%d/%m/%Y') }}{% if e.heure_echeance %} — {{ e.heure_echeance.strftime('%Hh%M') }}{% endif %}
+            </span>
+            <span class="echeance-actions">
+                {% if e.statut == "fait" %}
+                    <form method="post" action="{{ url_for('dossiers.marquer_echeance_a_faire', dossier_id=dossier.id, echeance_id=e.id) }}" style="display:inline">
+                        <button type="submit">Rouvrir</button>
+                    </form>
+                {% else %}
+                    <form method="post" action="{{ url_for('dossiers.marquer_echeance_fait', dossier_id=dossier.id, echeance_id=e.id) }}" style="display:inline">
+                        <button type="submit">Fait</button>
+                    </form>
+                {% endif %}
+                {% if dossier.statut != "clos" %}
+                {% set formulaire_modif_echeance = formulaires_echeances[e.id] %}
+                <details class="details-bouton">
+                <summary>Modifier</summary>
+                <form method="post" action="{{ url_for('dossiers.modifier_echeance', dossier_id=dossier.id, echeance_id=e.id) }}">
+                    {{ formulaire_modif_echeance.hidden_tag() }}
+                    <p>{{ formulaire_modif_echeance.categorie_id.label }} {{ formulaire_modif_echeance.categorie_id() }}</p>
+                    <p>{{ formulaire_modif_echeance.libelle.label }} {{ formulaire_modif_echeance.libelle() }}</p>
+                    <p>{{ formulaire_modif_echeance.date_echeance.label }} {{ formulaire_modif_echeance.date_echeance() }}</p>
+                    <p>{{ formulaire_modif_echeance.heure_echeance.label }} {{ formulaire_modif_echeance.heure_echeance() }}</p>
+                    <p>{{ formulaire_modif_echeance.notes.label }} {{ formulaire_modif_echeance.notes() }}</p>
+                    {{ formulaire_modif_echeance.soumettre() }}
+                </form>
+                </details>
+                {% endif %}
+                {% if dossier.statut != "clos" %}
+                    <form method="post" action="{{ url_for('dossiers.supprimer_echeance', dossier_id=dossier.id, echeance_id=e.id) }}" style="display:inline"
+                          onsubmit="return confirm('Supprimer cette échéance ?');">
+                        <button type="submit">Supprimer</button>
+                    </form>
+                {% endif %}
+            </span>
+        </div>
+        {% if e.notes %}<p class="aide echeance-notes">{{ e.notes }}</p>{% endif %}
+        <details class="details-info">
+        <summary>Détails</summary>
+        <p class="aide echeance-info">
+            Créée par {{ utilisateur_noms.get(e.cree_par, "—") }} le {{ e.cree_le.strftime('%d/%m/%Y %H:%M') }}
+            {% if e.modifie_le %}<br>Dernière modification par {{ utilisateur_noms.get(e.modifie_par, "—") }} le {{ e.modifie_le.strftime('%d/%m/%Y %H:%M') }}{% endif %}
+        </p>
+        </details>
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+    <p class="aide">Aucune échéance enregistrée.</p>
+{% endif %}
+
+{% if dossier.statut != "clos" %}
+<details>
+<summary>Ajouter une échéance</summary>
+<form method="post" action="{{ url_for('dossiers.ajouter_echeance', dossier_id=dossier.id) }}">
+    {{ formulaire_echeance.hidden_tag() }}
+    <p>{{ formulaire_echeance.categorie_id.label }} {{ formulaire_echeance.categorie_id() }}</p>
+    <p>{{ formulaire_echeance.libelle.label }} {{ formulaire_echeance.libelle() }}</p>
+    <p>{{ formulaire_echeance.date_echeance.label }} {{ formulaire_echeance.date_echeance() }}</p>
+    <p>{{ formulaire_echeance.heure_echeance.label }} {{ formulaire_echeance.heure_echeance() }}</p>
+    <p>{{ formulaire_echeance.notes.label }} {{ formulaire_echeance.notes() }}</p>
+    {{ formulaire_echeance.soumettre() }}
+</form>
+</details>
+{% endif %}
+
 <h2>Documents</h2>
 {% if documents %}
 <ul class="liste-documents">

@@ -63,11 +63,13 @@
 {% else %}
     <p>Aucun dossier pour ce contact.</p>
 {% endif %}
+{% if not est_avocat %}
 <form method="post" action="{{ url_for('dossiers.nouveau') }}">
     {{ formulaire_nouveau_dossier.hidden_tag() }}
     {{ formulaire_nouveau_dossier.contact_id() }}
     {{ formulaire_nouveau_dossier.soumettre() }}
 </form>
+{% endif %}
 </div>
 
 </div>

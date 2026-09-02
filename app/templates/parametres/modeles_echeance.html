@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titre %}Modèles d'échéance{% endblock %}
+{% block contenu %}
+<h1>Modèles d'échéance</h1>
+<p>Réservé aux comptes avocat et collaborateur. Ces modèles sont suggérés à l'utilisateur sur la fiche d'un dossier dont la matière correspond, à accepter, corriger ou ignorer — jamais créés automatiquement.</p>
+
+<table>
+    <thead><tr><th>Matière</th><th>Libellé</th><th>Catégorie</th><th>Délai</th><th></th><th></th></tr></thead>
+    <tbody>
+    {% for m, matiere_libelle in modeles %}
+        <tr{% if not m.actif %} style="opacity:0.6"{% endif %}>
+            <td>{{ matiere_libelle }}</td>
+            <td>{{ m.libelle }}</td>
+            <td>{{ categorie_libelles.get(m.categorie_id, "—") }}</td>
+            <td>{{ m.delai_jours }} jour{{ "s" if m.delai_jours != 1 else "" }}</td>
+            <td>{% if not m.actif %}(inactif){% endif %}</td>
+            <td>
+                <form method="post" action="{{ url_for('parametres.basculer_modele_echeance', modele_id=m.id) }}" style="display:inline">
+                    <button type="submit">{{ "Réactiver" if not m.actif else "Désactiver" }}</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<h2>Nouveau modèle</h2>
+<form method="post" action="{{ url_for('parametres.creer_modele_echeance') }}">
+    {{ formulaire.hidden_tag() }}
+    <p>{{ formulaire.matiere_id.label }} {{ formulaire.matiere_id() }}</p>
+    <p>{{ formulaire.libelle.label }} {{ formulaire.libelle(size=32) }}</p>
+    <p>{{ formulaire.categorie_id.label }} {{ formulaire.categorie_id() }}</p>
+    <p>{{ formulaire.delai_jours.label }} {{ formulaire.delai_jours(size=6) }}</p>
+    {{ formulaire.soumettre() }}
+</form>
+{% endblock %}

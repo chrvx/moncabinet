@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 
 @dataclass
@@ -259,6 +259,55 @@ class DossierDocument:
     chemin_typ: str
     cree_par: int | None
     cree_le: datetime
+
+
+@dataclass
+class CategorieEcheance:
+    """Une catégorie d'échéance (Audience, Délai de procédure...) — table de
+    référence éditable depuis parametres/, comme Matiere, pour que le
+    cabinet puisse la faire évoluer sans modification de code."""
+
+    id: int
+    libelle: str
+    actif: bool
+
+
+@dataclass
+class Echeance:
+    """Une échéance rattachée à un dossier : audience, délai de procédure,
+    rappel client ou entrée d'un calendrier de procédure — voir
+    app/repositories/echeances.py. heure_echeance est facultative, seule la
+    date est obligatoire."""
+
+    id: int
+    dossier_id: int
+    categorie_id: int
+    libelle: str
+    date_echeance: date
+    heure_echeance: time | None
+    statut: str
+    fait_le: datetime | None
+    notes: str | None
+    cree_par: int | None
+    cree_le: datetime
+    modifie_par: int | None
+    modifie_le: datetime | None
+
+
+@dataclass
+class ModeleEcheance:
+    """Un modèle d'échéance suggéré pour une matière donnée (ex: "Conclusions
+    d'appelant" à 90 jours pour la matière Appel) — une suggestion à
+    accepter, corriger ou ignorer à l'ouverture d'un dossier de cette
+    matière, jamais une création automatique. Voir
+    app/repositories/echeances.py::lister_modeles_non_instancies."""
+
+    id: int
+    matiere_id: int
+    libelle: str
+    categorie_id: int
+    delai_jours: int
+    actif: bool
 
 
 @dataclass

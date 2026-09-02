@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titre %}Catégories d'échéance{% endblock %}
+{% block contenu %}
+<h1>Catégories d'échéance</h1>
+<p>Réservé aux comptes avocat et collaborateur.</p>
+
+<ul>
+{% for c in categories %}
+    <li{% if not c.actif %} style="opacity:0.6"{% endif %}>
+        {{ c.libelle }}{% if not c.actif %} (inactive){% endif %}
+        <form method="post" action="{{ url_for('parametres.basculer_categorie_echeance', categorie_id=c.id) }}" style="display:inline">
+            <button type="submit">{{ "Réactiver" if not c.actif else "Désactiver" }}</button>
+        </form>
+    </li>
+{% endfor %}
+</ul>
+
+<h2>Nouvelle catégorie</h2>
+<form method="post" action="{{ url_for('parametres.creer_categorie_echeance') }}">
+    {{ formulaire.hidden_tag() }}
+    {{ formulaire.libelle(size=32) }}
+    {{ formulaire.soumettre() }}
+</form>
+{% endblock %}

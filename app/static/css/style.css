@@ -693,6 +693,61 @@ h2.titre-section a { font-family: var(--police-corps); font-size: 0.82rem; font-
 
 .generer-document { display: flex; align-items: center; gap: 0.7rem; margin-top: 1rem; }
 
+/* ---------- Échéances ---------- */
+
+.categorie-badge { display: inline-block; font-size: 0.78rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 6px; color: var(--primaire-survol); background: var(--primaire-clair); white-space: nowrap; }
+
+.liste-echeances { list-style: none; margin: 0 0 1rem; padding: 0; border: 1px solid var(--bordure); border-radius: var(--rayon); overflow: hidden; }
+.liste-echeances > li { padding: 0.8rem 1.1rem; border-bottom: 1px solid var(--bordure); font-size: 0.9rem; }
+.liste-echeances > li:last-child { border-bottom: none; }
+.liste-echeances > li.echeance-retard { background: var(--danger-clair); }
+.echeance-ligne { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.echeance-libelle { flex: 1; min-width: 160px; }
+.echeance-libelle.echeance-faite { color: var(--texte-attenue); text-decoration: line-through; }
+.date-echeance { font-size: 0.85rem; color: var(--texte-attenue); white-space: nowrap; }
+.echeance-retard .date-echeance { color: var(--danger); font-weight: 600; }
+.echeance-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.echeance-notes { margin: 0.4rem 0 0; }
+.liste-echeances details { margin-top: 0.6rem; }
+
+/* Le bouton "Modifier" est un <details> pour révéler son formulaire, mais
+   doit s'afficher comme les boutons Fait/Supprimer à ses côtés : le
+   <details> lui-même n'a donc plus de boîte (display: contents) pour ne
+   pas perturber la ligne d'actions, seul le <summary> est stylé comme un
+   bouton, et le formulaire révélé force son propre retour à la ligne
+   (flex-basis 100%) pour s'afficher pleine largeur sous les boutons. */
+.echeance-actions details.details-bouton { display: contents; }
+.echeance-actions details.details-bouton summary {
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.87rem;
+    color: #fff;
+    background: var(--primaire);
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1.1rem;
+    cursor: pointer;
+    list-style: none;
+}
+.echeance-actions details.details-bouton summary:hover { background: var(--primaire-survol); }
+.echeance-actions details.details-bouton summary::before { content: none; }
+.echeance-actions details.details-bouton form { flex: 1 1 100%; margin-top: 0.6rem; }
+
+.details-info { border: none; padding: 0; margin: 0.4rem 0 0; }
+.details-info[open] { padding-bottom: 0; }
+.details-info summary { font-weight: 400; font-size: 0.78rem; color: var(--texte-attenue); }
+.echeance-info { margin: 0.3rem 0 0; font-size: 0.78rem; line-height: 1.5; }
+
+.carte-suggestions { border-color: var(--avertissement); background: var(--avertissement-clair); }
+.carte-suggestions h3 { margin-top: 0; }
+.liste-suggestions { list-style: none; margin: 0; padding: 0; }
+.liste-suggestions li { padding: 0.5rem 0; border-bottom: 1px dashed var(--bordure); }
+.liste-suggestions li:last-child { border-bottom: none; }
+.liste-suggestions form { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.suggestion-libelle { flex: 1; min-width: 160px; }
+
+.liste-activite li.echeance-retard { background: var(--danger-clair); }
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {

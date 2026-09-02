@@ -8,6 +8,15 @@ from app.modeles import Utilisateur
 # jamais de requête directement, elles appellent ces fonctions.
 
 
+def lister() -> list[Utilisateur]:
+    with db.pool.connection() as conn:
+        with conn.cursor(row_factory=class_row(Utilisateur)) as cur:
+            cur.execute(
+                "SELECT id, nom, mot_de_passe_hash, role, actif FROM utilisateur ORDER BY nom"
+            )
+            return cur.fetchall()
+
+
 def recuperer_par_id(utilisateur_id: int) -> Utilisateur | None:
     with db.pool.connection() as conn:
         with conn.cursor(row_factory=class_row(Utilisateur)) as cur:
