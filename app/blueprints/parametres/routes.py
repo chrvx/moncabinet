@@ -3,12 +3,14 @@ from flask_login import login_required
 from psycopg.errors import UniqueViolation
 
 from app.blueprints.parametres.forms import (
+    ChangerCategorieMatiereForm,
     NouveauBarreauForm,
     NouveauModeleEcheanceForm,
     NouvelleCategorieEcheanceForm,
+    NouvelleCategorieMatiereForm,
     NouvelleMatiereForm,
 )
-from app.repositories import categories_echeance
+from app.repositories import categories_echeance, categories_matiere
 from app.repositories import echeances as echeances_repo
 from app.repositories import matieres, reference
 from app.securite import role_requis
@@ -55,15 +57,28 @@ def basculer_barreau(barreau_id):
 # --- Matières (réservé avocat / collaborateur) ------------------------------
 
 
+def _choix_categories_matiere():
+    return [(c.id, c.libelle) for c in categories_matiere.lister()]
+
+
 @bp.route("/matieres")
 @login_required
 @role_requis("avocat", "collaborateur")
 def liste_matieres():
     formulaire = NouvelleMatiereForm()
+    formulaire.categorie_id.choices = _choix_categories_matiere()
+    matieres_liste = matieres.lister(actives_seulement=False)
+    formulaires_categorie = {}
+    for m in matieres_liste:
+        f = ChangerCategorieMatiereForm(categorie_id=m.categorie_id)
+        f.categorie_id.choices = _choix_categories_matiere()
+        formulaires_categorie[m.id] = f
     return render_template(
         "parametres/matieres.html",
-        matieres=matieres.lister(actives_seulement=False),
+        matieres=matieres_liste,
+        categorie_libelles={c.id: c.libelle for c in categories_matiere.lister(actives_seulement=False)},
         formulaire=formulaire,
+        formulaires_categorie=formulaires_categorie,
     )
 
 
@@ -72,12 +87,15 @@ def liste_matieres():
 @role_requis("avocat", "collaborateur")
 def creer_matiere():
     formulaire = NouvelleMatiereForm()
+    formulaire.categorie_id.choices = _choix_categories_matiere()
     if formulaire.validate_on_submit():
         try:
-            matieres.creer(formulaire.libelle.data)
+            matieres.creer(formulaire.libelle.data, int(formulaire.categorie_id.data))
             flash("Matière ajoutée.", "succes")
         except UniqueViolation:
             flash("Cette matière existe déjà.", "erreur")
+    else:
+        flash("Le formulaire contient des erreurs.", "erreur")
     return redirect(url_for("parametres.liste_matieres"))
 
 
@@ -87,6 +105,56 @@ def creer_matiere():
 def basculer_matiere(matiere_id):
     matieres.basculer_actif(matiere_id)
     return redirect(url_for("parametres.liste_matieres"))
+
+
+@bp.route("/matieres/<int:matiere_id>/categorie", methods=["POST"])
+@login_required
+@role_requis("avocat", "collaborateur")
+def changer_categorie_matiere(matiere_id):
+    formulaire = ChangerCategorieMatiereForm()
+    formulaire.categorie_id.choices = _choix_categories_matiere()
+    if formulaire.validate_on_submit():
+        matieres.changer_categorie(matiere_id, int(formulaire.categorie_id.data))
+        flash("Catégorie de la matière mise à jour.", "succes")
+    else:
+        flash("Choisissez une catégorie valide.", "erreur")
+    return redirect(url_for("parametres.liste_matieres"))
+
+
+# --- Catégories de matière (réservé avocat / collaborateur) -----------------
+
+
+@bp.route("/categories-matiere")
+@login_required
+@role_requis("avocat", "collaborateur")
+def liste_categories_matiere():
+    return render_template(
+        "parametres/categories_matiere.html",
+        categories=categories_matiere.lister(actives_seulement=False),
+        formulaire=NouvelleCategorieMatiereForm(),
+    )
+
+
+@bp.route("/categories-matiere", methods=["POST"])
+@login_required
+@role_requis("avocat", "collaborateur")
+def creer_categorie_matiere():
+    formulaire = NouvelleCategorieMatiereForm()
+    if formulaire.validate_on_submit():
+        try:
+            categories_matiere.creer(formulaire.libelle.data)
+            flash("Catégorie ajoutée.", "succes")
+        except UniqueViolation:
+            flash("Cette catégorie existe déjà.", "erreur")
+    return redirect(url_for("parametres.liste_categories_matiere"))
+
+
+@bp.route("/categories-matiere/<int:categorie_id>/basculer", methods=["POST"])
+@login_required
+@role_requis("avocat", "collaborateur")
+def basculer_categorie_matiere(categorie_id):
+    categories_matiere.basculer_actif(categorie_id)
+    return redirect(url_for("parametres.liste_categories_matiere"))
 
 
 # --- Modèles d'échéance (réservé avocat / collaborateur) --------------------

@@ -211,10 +211,22 @@ class Email:
 
 
 @dataclass
+class CategorieMatiere:
+    """Une catégorie de matière (Droit de la famille, Droit immobilier...) —
+    table de référence éditable depuis parametres/, comme CategorieEcheance,
+    utilisée pour regrouper les matières dans le menu déroulant du dossier."""
+
+    id: int
+    libelle: str
+    actif: bool
+
+
+@dataclass
 class Matiere:
     id: int
     libelle: str
     actif: bool
+    categorie_id: int | None
 
 
 @dataclass

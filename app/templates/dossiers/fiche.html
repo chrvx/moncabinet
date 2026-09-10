@@ -53,7 +53,18 @@
     <form method="post" action="{{ url_for('dossiers.modifier', dossier_id=dossier.id) }}">
         {{ formulaire_modif.hidden_tag() }}
         <p>{{ formulaire_modif.categorie.label }} {{ formulaire_modif.categorie() }}</p>
-        <p>{{ formulaire_modif.matiere_id.label }} {{ formulaire_modif.matiere_id() }}</p>
+        <p>{{ formulaire_modif.matiere_id.label }}
+        <select name="matiere_id" id="matiere_id">
+            <option value="" {% if not formulaire_modif.matiere_id.data %}selected{% endif %}>—</option>
+            {% for categorie_libelle, matieres_categorie in matieres_groupees %}
+            <optgroup label="{{ categorie_libelle }}">
+                {% for m in matieres_categorie %}
+                <option value="{{ m.id }}" {% if formulaire_modif.matiere_id.data == m.id|string %}selected{% endif %}>{{ m.libelle }}</option>
+                {% endfor %}
+            </optgroup>
+            {% endfor %}
+        </select>
+        </p>
         {{ formulaire_modif.soumettre() }}
     </form>
     </details>

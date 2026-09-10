@@ -13,7 +13,7 @@ from app.blueprints.dossiers.forms import (
     NouveauDossierForm,
     OuvrirDossierForm,
 )
-from app.repositories import categories_echeance
+from app.repositories import categories_echeance, categories_matiere
 from app.repositories import documents as documents_repo
 from app.repositories import echeances as echeances_repo
 from app.repositories import dossiers, matieres, reference, utilisateurs
@@ -26,6 +26,23 @@ bp = Blueprint("dossiers", __name__, url_prefix="/dossiers")
 
 def _choix_avec_vide(items, cle, libelle):
     return [("", "—")] + [(getattr(i, cle), getattr(i, libelle)) for i in items]
+
+
+def _matieres_groupees():
+    """Regroupe les matières actives par catégorie pour l'affichage en
+    <optgroup> du menu "Matière" (voir dossiers/fiche.html) — les matières
+    sans catégorie ("non classées") forment un groupe à part, en dernier."""
+    par_categorie_id = {}
+    for m in matieres.lister():
+        par_categorie_id.setdefault(m.categorie_id, []).append(m)
+    groupes = [
+        (c.libelle, par_categorie_id[c.id])
+        for c in categories_matiere.lister()
+        if c.id in par_categorie_id
+    ]
+    if None in par_categorie_id:
+        groupes.append(("Non classée", par_categorie_id[None]))
+    return groupes
 
 
 def _bloquer_si_clos(dossier_id):
@@ -310,6 +327,7 @@ def fiche(dossier_id):
         categorie_libelles={c.id: c.libelle for c in categories_echeance.lister(actives_seulement=False)},
         utilisateur_noms={u.id: u.nom for u in utilisateurs.lister()},
         aujourd_hui=date.today(),
+        matieres_groupees=_matieres_groupees(),
     )
 
 

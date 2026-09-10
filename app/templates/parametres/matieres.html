@@ -8,6 +8,12 @@
 {% for m in matieres %}
     <li{% if not m.actif %} style="opacity:0.6"{% endif %}>
         {{ m.libelle }}{% if not m.actif %} (inactive){% endif %}
+        — {{ categorie_libelles.get(m.categorie_id, "non classée") }}
+        <form method="post" action="{{ url_for('parametres.changer_categorie_matiere', matiere_id=m.id) }}" style="display:inline">
+            {{ formulaires_categorie[m.id].hidden_tag() }}
+            {{ formulaires_categorie[m.id].categorie_id() }}
+            {{ formulaires_categorie[m.id].soumettre() }}
+        </form>
         <form method="post" action="{{ url_for('parametres.basculer_matiere', matiere_id=m.id) }}" style="display:inline">
             <button type="submit">{{ "Réactiver" if not m.actif else "Désactiver" }}</button>
         </form>
@@ -19,6 +25,7 @@
 <form method="post" action="{{ url_for('parametres.creer_matiere') }}">
     {{ formulaire.hidden_tag() }}
     {{ formulaire.libelle(size=32) }}
+    {{ formulaire.categorie_id() }}
     {{ formulaire.soumettre() }}
 </form>
 {% endblock %}
