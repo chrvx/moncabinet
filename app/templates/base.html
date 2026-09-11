@@ -31,6 +31,11 @@
                 <svg viewBox="0 0 24 24"><path d="M4 7h5l1.5 2H20v10H4z"/></svg>
                 Dossiers
             </a>
+            <a href="{{ url_for('messagerie.index') }}"
+               class="{{ 'actif' if request.blueprint == 'messagerie' else '' }}">
+                <svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="m4 6 8 7 8-7"/></svg>
+                Messagerie
+            </a>
             {% if current_user.is_authenticated and current_user.role in ("avocat", "collaborateur") %}
             <span class="nav-groupe-titre">Paramètres</span>
             <a href="{{ url_for('parametres.liste_barreaux') }}"

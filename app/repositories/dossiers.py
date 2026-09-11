@@ -184,6 +184,25 @@ def recuperer(dossier_id: int) -> Dossier | None:
             return cur.fetchone()
 
 
+def recuperer_par_reference(reference: str) -> Dossier | None:
+    """Utilisé par la synchronisation IMAP (app/services/messagerie.py) pour
+    retrouver le dossier correspondant au nom d'un répertoire IMAP, dont
+    seule la référence (les 5 premiers chiffres) fait foi."""
+    with db.pool.connection() as conn:
+        with conn.cursor(row_factory=class_row(Dossier)) as cur:
+            cur.execute(
+                """
+                SELECT id, reference, statut, categorie, matiere_id,
+                       date_ouverture, date_cloture, cree_par, cree_le,
+                       modifie_par, modifie_le, numero_archive
+                FROM dossier
+                WHERE reference = %s
+                """,
+                (reference,),
+            )
+            return cur.fetchone()
+
+
 def nom_calcule(dossier_id: int) -> str:
     """"NOM DES CLIENTS / NOM DES ADVERSAIRES", en ne gardant que le nom
     (pas le prénom) pour les personnes physiques, comme le veut la

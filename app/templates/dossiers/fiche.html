@@ -225,7 +225,7 @@
 {% endif %}
 
 {% if dossier.statut != "clos" %}
-<details>
+<details id="ajouter-echeance" {{ "open" if formulaire_echeance.libelle.data }}>
 <summary>Ajouter une échéance</summary>
 <form method="post" action="{{ url_for('dossiers.ajouter_echeance', dossier_id=dossier.id) }}">
     {{ formulaire_echeance.hidden_tag() }}
@@ -240,20 +240,36 @@
 {% endif %}
 
 <h2>Documents</h2>
+{% set libelles_origine = {"genere": "Généré", "email": "E-mail", "depose": "Déposé"} %}
 {% if documents %}
 <ul class="liste-documents">
 {% for document in documents %}
     <li>
-        <span>{{ document.titre }} <span class="date-doc">— {{ document.cree_le.strftime('%d/%m/%Y %H:%M') }}</span></span>
+        <span>
+            <span class="categorie-badge">{{ libelles_origine[document.type_document] }}</span>
+            {{ document.titre }}
+            {% if document.est_piece %}
+                <span class="categorie-badge">Pièce{% if document.numero_piece %} n°{{ document.numero_piece }}{% endif %}</span>
+            {% endif %}
+            <span class="date-doc">— {{ document.date_tri.strftime('%d/%m/%Y %H:%M') }}</span>
+        </span>
         <span class="liens-doc">
-            <a href="{{ url_for('documents.telecharger_pdf', dossier_id=dossier.id, document_id=document.id) }}">PDF</a>
-            <a href="{{ url_for('documents.telecharger_typ', dossier_id=dossier.id, document_id=document.id) }}">source .typ</a>
+            {% if document.type_document == "email" %}
+                <a href="{{ url_for('messagerie.consulter_email', document_id=document.id) }}">Lire</a>
+            {% endif %}
+            <a href="{{ url_for('documents.telecharger', dossier_id=dossier.id, document_id=document.id) }}">Télécharger</a>
+            {% if document.type_document == "genere" %}
+                <a href="{{ url_for('documents.telecharger_typ', dossier_id=dossier.id, document_id=document.id) }}">source .typ</a>
+            {% endif %}
+            {% if not document.est_piece %}
+                <a href="{{ url_for('documents.marquer_piece', dossier_id=dossier.id, document_id=document.id) }}">Marquer comme pièce</a>
+            {% endif %}
         </span>
     </li>
 {% endfor %}
 </ul>
 {% else %}
-    <p class="aide">Aucun document généré.</p>
+    <p class="aide">Aucun document.</p>
 {% endif %}
 
 {% if dossier.statut != "clos" %}
@@ -269,6 +285,7 @@
     {% else %}
         <p class="aide">Aucun modèle de document disponible.</p>
     {% endif %}
+    <p><a href="{{ url_for('documents.deposer', dossier_id=dossier.id) }}">Déposer un fichier</a></p>
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/recherche_contact.js') }}"></script>

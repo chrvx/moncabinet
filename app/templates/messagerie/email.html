@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block titre %}{{ document.titre }}{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id) }}">&larr; Retour au dossier {{ dossier.reference }}</a></p>
+<h1>{{ document.titre }}</h1>
+
+<p>
+    <strong>De :</strong> {{ document_email.expediteur }}<br>
+    <strong>À :</strong> {{ document_email.destinataires }}<br>
+    <strong>Date :</strong> {{ document_email.date_message.strftime('%d/%m/%Y %H:%M') }}<br>
+    <strong>Sens :</strong> {{ "Envoyé par le cabinet" if document_email.sens == "envoye" else "Reçu" }}
+</p>
+
+<p class="liens-doc">
+    <a href="{{ url_for('documents.telecharger', dossier_id=dossier.id, document_id=document.id) }}">Télécharger le .eml</a>
+    <a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id, echeance_libelle=document.titre, echeance_document_id=document.id) }}#ajouter-echeance">Créer une échéance</a>
+</p>
+
+<h2>Message</h2>
+<pre class="corps-email">{{ corps }}</pre>
+
+{% if pieces_jointes %}
+<h2>Pièces jointes</h2>
+<ul class="liste-documents">
+{% for piece in pieces_jointes %}
+    <li>
+        <span>{{ piece.nom }} <span class="date-doc">— {{ (piece.taille / 1024) | round(1) }} Ko</span></span>
+        <form method="post" action="{{ url_for('messagerie.verser_piece_jointe', document_id=document.id, index=piece.index) }}" style="display:inline">
+            <button type="submit">Verser au dossier</button>
+        </form>
+    </li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

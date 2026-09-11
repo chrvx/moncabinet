@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "_macros.html" import champ %}
+{% block titre %}Déposer un fichier{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id) }}">&larr; Retour au dossier</a></p>
+<h1>Déposer un fichier</h1>
+
+<form method="post" enctype="multipart/form-data">
+    {{ formulaire.hidden_tag() }}
+    {{ champ(formulaire.fichier) }}
+    {{ champ(formulaire.titre) }}
+    {{ champ(formulaire.est_piece) }}
+    {{ champ(formulaire.contact_provenance_id) }}
+    {{ champ(formulaire.date_transmission) }}
+    {{ formulaire.soumettre() }}
+</form>
+{% endblock %}

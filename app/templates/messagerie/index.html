@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block titre %}Messagerie{% endblock %}
+{% block contenu %}
+<h1>Messagerie</h1>
+<p class="aide">
+    Importe les messages classés par Thunderbird dans les répertoires de
+    dossiers de la boîte du cabinet. La boîte de réception, le dossier
+    « traité » et les envoyés ne sont jamais lus.
+</p>
+<form method="post" action="{{ url_for('messagerie.synchroniser') }}">
+    <button type="submit">Lancer la synchronisation</button>
+</form>
+{% endblock %}

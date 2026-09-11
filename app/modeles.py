@@ -258,19 +258,82 @@ class ContactEmail:
 
 
 @dataclass
-class DossierDocument:
-    """Un document généré par fusion d'un modèle Typst avec les données
-    d'un dossier — voir app/services/generation_documents.py.
-    chemin_pdf/chemin_typ sont relatifs à instance/documents/."""
+class Document:
+    """Une pièce rattachée à un dossier, quelle que soit son origine —
+    document généré par fusion Typst, e-mail importé ou fichier déposé (voir
+    type_document). chemin_fichier est relatif à instance/documents/ et
+    pointe vers le fichier principal : le PDF pour un document généré, le
+    .eml pour un e-mail, le fichier uploadé pour un dépôt. Les champs propres
+    à chaque type vivent dans la table fille correspondante (DocumentGenere,
+    DocumentEmail) — voir app/repositories/documents.py."""
 
     id: int
     dossier_id: int
-    modele_slug: str
+    type_document: str
     titre: str
-    chemin_pdf: str
-    chemin_typ: str
+    chemin_fichier: str
+    document_origine_id: int | None
     cree_par: int | None
     cree_le: datetime
+
+
+@dataclass
+class DocumentGenere:
+    """Spécialisation de Document pour type_document == 'genere' : garde le
+    modèle Typst utilisé et le .typ fusionné, que l'utilisateur peut
+    retélécharger pour le personnaliser localement."""
+
+    document_id: int
+    modele_slug: str
+    chemin_typ: str
+
+
+@dataclass
+class DocumentEmail:
+    """Spécialisation de Document pour type_document == 'email'. message_id
+    sert au dédoublonnage lors des synchronisations IMAP répétées — voir
+    app/repositories/documents.py pour le contrôle d'unicité par dossier."""
+
+    document_id: int
+    sens: str
+    expediteur: str
+    destinataires: str
+    objet: str | None
+    date_message: datetime
+    message_id: str
+
+
+@dataclass
+class DocumentPiece:
+    """Caractéristique optionnelle d'un document, de n'importe quel type :
+    en fait une pièce (élément de preuve) communicable. numero_piece est
+    nullable tant que la pièce n'a pas encore été formellement communiquée."""
+
+    document_id: int
+    numero_piece: str | None
+    contact_provenance_id: int
+    date_transmission: date | None
+    utilisee: bool
+
+
+@dataclass
+class DocumentListe:
+    """Vue composite d'un document pour son affichage en liste (fiche
+    dossier, tableau de bord) : les champs des tables filles utiles à
+    l'affichage, aplatis, plus date_tri — la date de référence pour le tri
+    (date_message pour un e-mail, date_transmission pour une pièce quand
+    elle est renseignée, cree_le sinon), calculée par la requête et jamais
+    stockée. Voir app/repositories/documents.py::lister_pour_dossier."""
+
+    id: int
+    dossier_id: int
+    type_document: str
+    titre: str
+    chemin_fichier: str
+    cree_le: datetime
+    date_tri: datetime
+    est_piece: bool
+    numero_piece: str | None
 
 
 @dataclass
@@ -304,6 +367,7 @@ class Echeance:
     cree_le: datetime
     modifie_par: int | None
     modifie_le: datetime | None
+    document_id: int | None
 
 
 @dataclass

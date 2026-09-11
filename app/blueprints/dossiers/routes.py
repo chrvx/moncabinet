@@ -272,7 +272,12 @@ def fiche(dossier_id):
     categorie_choix = [(c.id, c.libelle) for c in categories_echeance.lister()]
 
     echeances = echeances_repo.lister_pour_dossier(dossier_id)
-    formulaire_echeance = EcheanceForm()
+    # Préremplissage depuis le lien "créer une échéance" d'un document (compte
+    # rendu de synchronisation IMAP, fiche e-mail) — voir app/blueprints/messagerie.
+    formulaire_echeance = EcheanceForm(
+        libelle=request.args.get("echeance_libelle"),
+        document_id=request.args.get("echeance_document_id"),
+    )
     formulaire_echeance.categorie_id.choices = categorie_choix
     formulaires_echeances = {}
     for e in echeances:
@@ -485,6 +490,7 @@ def ajouter_echeance(dossier_id):
             heure_echeance=formulaire.heure_echeance.data,
             notes=formulaire.notes.data or None,
             utilisateur_id=current_user.id,
+            document_id=int(formulaire.document_id.data) if formulaire.document_id.data else None,
         )
         flash("Échéance ajoutée.", "succes")
     else:

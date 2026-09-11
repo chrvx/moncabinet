@@ -26,12 +26,14 @@ def create_app():
     from app.blueprints.contacts.routes import bp as contacts_bp
     from app.blueprints.documents.routes import bp as documents_bp
     from app.blueprints.dossiers.routes import bp as dossiers_bp
+    from app.blueprints.messagerie.routes import bp as messagerie_bp
     from app.blueprints.parametres.routes import bp as parametres_bp
     app.register_blueprint(accueil_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(contacts_bp)
     app.register_blueprint(documents_bp)
     app.register_blueprint(dossiers_bp)
+    app.register_blueprint(messagerie_bp)
     app.register_blueprint(parametres_bp)
 
     @app.errorhandler(403)

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block titre %}Compte rendu de synchronisation{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('messagerie.index') }}">&larr; Retour</a></p>
+<h1>Compte rendu de synchronisation</h1>
+<p class="aide">{{ compte_rendu.nb_importes }} message(s) importé(s).</p>
+
+{% if compte_rendu.dossiers_synchronises %}
+{% for ds in compte_rendu.dossiers_synchronises %}
+<h2>{{ ds.reference }} <span class="aide">— {{ ds.documents_importes | length }} message(s)</span></h2>
+<ul class="liste-documents">
+{% for document in ds.documents_importes %}
+    <li>
+        <span>
+            <a href="{{ url_for('messagerie.consulter_email', document_id=document.id) }}">{{ document.titre }}</a>
+            <span class="date-doc">— {{ document.cree_le.strftime('%d/%m/%Y %H:%M') }}</span>
+        </span>
+        <span class="liens-doc">
+            <a href="{{ url_for('dossiers.fiche', dossier_id=ds.dossier_id, echeance_libelle=document.titre, echeance_document_id=document.id) }}#ajouter-echeance">Créer une échéance</a>
+        </span>
+    </li>
+{% endfor %}
+</ul>
+{% endfor %}
+{% else %}
+    <p class="aide">Aucun nouveau message.</p>
+{% endif %}
+
+{% if compte_rendu.anomalies %}
+<h2>Anomalies</h2>
+<ul>
+{% for anomalie in compte_rendu.anomalies %}
+    <li>{{ anomalie.nom_repertoire_imap }} : {{ anomalie.raison }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

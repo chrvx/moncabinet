@@ -48,6 +48,10 @@ class EcheanceForm(FlaskForm):
     date_echeance = DateField("Date", validators=[DataRequired(message="Ce champ est requis.")])
     heure_echeance = TimeField("Heure (facultatif)", validators=[Optional()])
     notes = StringField("Notes", validators=[Optional()])
+    # Rempli quand le formulaire est ouvert depuis le lien "créer une
+    # échéance" d'un document (compte rendu de synchronisation, fiche
+    # e-mail) — voir dossiers.routes::fiche et documents.Document.
+    document_id = HiddenField(validators=[Optional()])
     soumettre = SubmitField("Enregistrer")
 
 

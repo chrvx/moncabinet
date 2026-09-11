@@ -18,7 +18,7 @@ from flask import current_app
 
 from app.repositories import coordonnees, dossiers, matieres
 from app.repositories.contacts import recuperer_personne_morale, recuperer_personne_physique
-from app.repositories.documents import creer as creer_dossier_document
+from app.repositories.documents import creer_genere
 from app.services.modeles_documents import ModeleDocument
 
 
@@ -32,7 +32,7 @@ def _repertoire_documents() -> Path:
 
 
 def resoudre_chemin(chemin_relatif: str) -> Path:
-    """Reconstitue le chemin absolu d'un fichier stocké en base (dossier_document.chemin_pdf/chemin_typ), relatif à instance/."""
+    """Reconstitue le chemin absolu d'un fichier stocké en base (document.chemin_fichier ou document_genere.chemin_typ), relatif à instance/."""
     return Path(current_app.instance_path) / chemin_relatif
 
 
@@ -141,11 +141,11 @@ def generer(
         raise ErreurGenerationDocument(resultat.stderr.strip() or "Échec de la compilation Typst.")
 
     racine_instance = Path(current_app.instance_path)
-    return creer_dossier_document(
+    return creer_genere(
         dossier_id=dossier_id,
         modele_slug=modele.slug,
         titre=modele.libelle,
-        chemin_pdf=str(chemin_pdf.relative_to(racine_instance)),
+        chemin_fichier=str(chemin_pdf.relative_to(racine_instance)),
         chemin_typ=str(chemin_typ.relative_to(racine_instance)),
         utilisateur_id=utilisateur_id,
     )

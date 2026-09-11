@@ -1,13 +1,15 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileRequired
 from wtforms import (
     BooleanField,
     DateField,
     IntegerField,
+    SelectField,
     StringField,
     SubmitField,
     TextAreaField,
 )
-from wtforms.validators import Optional
+from wtforms.validators import DataRequired, Optional
 
 from app.services.modeles_documents import ModeleDocument
 
@@ -35,3 +37,26 @@ def construire_formulaire(modele: ModeleDocument) -> FlaskForm:
 
     classe_formulaire = type("FormulaireGenerationDocument", (FlaskForm,), champs)
     return classe_formulaire()
+
+
+class DeposerDocumentForm(FlaskForm):
+    """Dépôt d'un fichier externe (scan, pièce jointe récupérée à la main,
+    clé USB...) — la case "c'est une pièce" révèle provenance et date de
+    transmission ; le numéro de pièce n'est pas saisi ici, il n'est attribué
+    qu'au moment de la communication formelle."""
+
+    fichier = FileField("Fichier", validators=[FileRequired(message="Choisissez un fichier.")])
+    titre = StringField("Titre", validators=[DataRequired(message="Ce champ est requis.")])
+    est_piece = BooleanField("C'est une pièce")
+    contact_provenance_id = SelectField("Provenance", validators=[Optional()])
+    date_transmission = DateField("Date de transmission", validators=[Optional()])
+    soumettre = SubmitField("Déposer")
+
+
+class MarquerPieceForm(FlaskForm):
+    """Marque un document déjà présent sur le dossier comme pièce —
+    mêmes champs que la case "c'est une pièce" du dépôt."""
+
+    contact_provenance_id = SelectField("Provenance", validators=[DataRequired()])
+    date_transmission = DateField("Date de transmission", validators=[Optional()])
+    soumettre = SubmitField("Marquer comme pièce")

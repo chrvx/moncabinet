@@ -7,7 +7,8 @@ from app.modeles import Echeance, ModeleEcheance
 
 _COLONNES = """
     id, dossier_id, categorie_id, libelle, date_echeance, heure_echeance,
-    statut, fait_le, notes, cree_par, cree_le, modifie_par, modifie_le
+    statut, fait_le, notes, cree_par, cree_le, modifie_par, modifie_le,
+    document_id
 """
 
 
@@ -19,18 +20,23 @@ def creer(
     heure_echeance: time | None,
     notes: str | None,
     utilisateur_id: int,
+    document_id: int | None = None,
 ) -> Echeance:
+    """document_id rattache l'échéance au document (e-mail, pièce scannée...)
+    qui l'a fait naître — voir le lien "créer une échéance" du compte rendu
+    de synchronisation et de la fiche e-mail. None dans le cas courant d'une
+    échéance saisie directement sur le dossier."""
     with db.pool.connection() as conn:
         with conn.cursor(row_factory=class_row(Echeance)) as cur:
             cur.execute(
                 f"""
                 INSERT INTO echeance
                     (dossier_id, categorie_id, libelle, date_echeance,
-                     heure_echeance, notes, cree_par)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                     heure_echeance, notes, cree_par, document_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING {_COLONNES}
                 """,
-                (dossier_id, categorie_id, libelle, date_echeance, heure_echeance, notes, utilisateur_id),
+                (dossier_id, categorie_id, libelle, date_echeance, heure_echeance, notes, utilisateur_id, document_id),
             )
             conn.commit()
             return cur.fetchone()
@@ -134,7 +140,7 @@ def lister_a_venir(limite: int = 5) -> list[tuple[Echeance, str | None]]:
                 SELECT e.id, e.dossier_id, e.categorie_id, e.libelle,
                        e.date_echeance, e.heure_echeance, e.statut, e.fait_le,
                        e.notes, e.cree_par, e.cree_le, e.modifie_par, e.modifie_le,
-                       d.reference
+                       e.document_id, d.reference
                 FROM echeance e
                 JOIN dossier d ON d.id = e.dossier_id
                 WHERE e.statut = 'a_faire' AND d.statut = 'ouvert'
@@ -143,7 +149,7 @@ def lister_a_venir(limite: int = 5) -> list[tuple[Echeance, str | None]]:
                 """,
                 (limite,),
             )
-            return [(Echeance(*ligne[0:13]), ligne[13]) for ligne in cur.fetchall()]
+            return [(Echeance(*ligne[0:14]), ligne[14]) for ligne in cur.fetchall()]
 
 
 def compter_a_venir() -> int:
