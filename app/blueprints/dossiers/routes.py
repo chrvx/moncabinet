@@ -198,6 +198,22 @@ def _choix_contacts_lies(intervenants):
     return choix
 
 
+def _onglet_actif():
+    """Les onglets de la fiche dossier sont de simples boutons radio
+    stylés en CSS (voir .onglets-dossier dans style.css) : naviguer vers
+    une ancre #ajouter-echeance/#ajouter-evenement ne coche pas le radio
+    correspondant tout seul. Les liens qui rechargent la fiche pour
+    préremplir un formulaire (raccourci "créer une échéance" depuis un
+    document, "Clôturer avec compte-rendu", filtre des événements annulés)
+    passent donc un paramètre de requête qu'on retraduit ici en onglet à
+    afficher par défaut, plutôt que de toujours retomber sur Intervenants."""
+    if request.args.get("evenement_echeance_id") or request.args.get("afficher_evenements_annules"):
+        return "evenements"
+    if request.args.get("echeance_libelle") or request.args.get("echeance_document_id"):
+        return "echeances"
+    return "intervenants"
+
+
 def _choix_dossiers_deplacement(dossier_id_actuel):
     """Choix de nouveau_dossier_id pour DeplacerEvenementForm : les
     dossiers ouverts autres que le dossier d'origine, référence et nom
@@ -407,6 +423,7 @@ def fiche(dossier_id):
         formulaires_deplacement_evenement=formulaires_deplacement_evenement,
         afficher_evenements_annules=afficher_evenements_annules,
         type_evenement_libelles={t.id: t.libelle for t in types_evenement.lister(actives_seulement=False)},
+        onglet_actif=_onglet_actif(),
     )
 
 

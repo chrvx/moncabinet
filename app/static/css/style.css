@@ -734,11 +734,13 @@ h2.titre-section a { font-family: var(--police-corps); font-size: 0.82rem; font-
 .onglet-panneau { display: none; }
 #onglet-intervenants:checked ~ .onglets-nav label[for="onglet-intervenants"],
 #onglet-echeances:checked ~ .onglets-nav label[for="onglet-echeances"],
+#onglet-evenements:checked ~ .onglets-nav label[for="onglet-evenements"],
 #onglet-documents:checked ~ .onglets-nav label[for="onglet-documents"] {
     color: var(--texte); border-bottom-color: var(--primaire);
 }
 #onglet-intervenants:checked ~ #panneau-intervenants,
 #onglet-echeances:checked ~ #panneau-echeances,
+#onglet-evenements:checked ~ #panneau-evenements,
 #onglet-documents:checked ~ #panneau-documents { display: block; }
 
 .liste-documents { list-style: none; margin: 0; padding: 0; border: 1px solid var(--bordure); border-radius: var(--rayon); overflow: hidden; }

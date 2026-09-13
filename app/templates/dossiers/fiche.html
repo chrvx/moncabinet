@@ -136,10 +136,10 @@
 {% endmacro %}
 
 <div class="onglets-dossier">
-    <input type="radio" name="onglet-dossier" id="onglet-intervenants" class="onglet-radio" checked>
-    <input type="radio" name="onglet-dossier" id="onglet-echeances" class="onglet-radio">
-    <input type="radio" name="onglet-dossier" id="onglet-evenements" class="onglet-radio">
-    <input type="radio" name="onglet-dossier" id="onglet-documents" class="onglet-radio">
+    <input type="radio" name="onglet-dossier" id="onglet-intervenants" class="onglet-radio" {{ "checked" if onglet_actif == "intervenants" }}>
+    <input type="radio" name="onglet-dossier" id="onglet-echeances" class="onglet-radio" {{ "checked" if onglet_actif == "echeances" }}>
+    <input type="radio" name="onglet-dossier" id="onglet-evenements" class="onglet-radio" {{ "checked" if onglet_actif == "evenements" }}>
+    <input type="radio" name="onglet-dossier" id="onglet-documents" class="onglet-radio" {{ "checked" if onglet_actif == "documents" }}>
     <div class="onglets-nav">
         <label for="onglet-intervenants">Intervenants</label>
         <label for="onglet-echeances">Échéances</label>
