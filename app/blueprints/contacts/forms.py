@@ -155,15 +155,6 @@ class CorrigerEmailForm(FlaskForm):
     soumettre = SubmitField("Corriger")
 
 
-class PartagerAdresseForm(FlaskForm):
-    """Retrouver un contact déjà enregistré pour réutiliser une de ses
-    adresses actives (couple partageant un domicile) plutôt que d'en
-    ressaisir une nouvelle."""
-
-    terme = StringField("Nom du contact qui a déjà cette adresse", validators=[Optional()])
-    soumettre = SubmitField("Chercher")
-
-
 # Les champs *_recherche + *_id (caché) ci-dessous suivent le même
 # mécanisme que AjouterIntervenantForm côté dossiers : le texte libre
 # alimente les suggestions de static/js/recherche_contact.js (mode

@@ -26,12 +26,25 @@ def _resoudre_cabinet(avocat_annuaire: AvocatAnnuaire, utilisateur_id: int) -> i
     cabinet : ce sont la ligne directe et la boîte mail personnelle de CET
     avocat, pas un contact générique du cabinet — les attribuer au cabinet
     ferait passer les coordonnées d'un seul associé pour celles de toute
-    la structure."""
+    la structure.
+
+    Le rapprochement se fait par (SIREN, ville) et non par SIREN seul : le
+    SIREN identifie l'entité juridique, pas l'établissement, et une
+    structure nationale (ex: FIDAL) a un seul SIREN mais plusieurs bureaux
+    physiques — les confondre en un unique contact leur ferait partager une
+    adresse qui n'est en réalité que celle d'un seul bureau. Sans ville sur
+    la ligne (rare), on retombe sur le SIREN seul plutôt que de renoncer au
+    rapprochement."""
     if avocat_annuaire.forme_juridique_cabinet in (None, "", FORME_JURIDIQUE_EXERCICE_INDIVIDUEL):
         return None
     if not avocat_annuaire.siret_siren_cabinet or not avocat_annuaire.raison_sociale_cabinet:
         return None
-    cabinet = contacts.recuperer_personne_morale_par_siren(avocat_annuaire.siret_siren_cabinet)
+    if avocat_annuaire.ville:
+        cabinet = contacts.recuperer_personne_morale_par_siren_et_ville(
+            avocat_annuaire.siret_siren_cabinet, avocat_annuaire.ville
+        )
+    else:
+        cabinet = contacts.recuperer_personne_morale_par_siren(avocat_annuaire.siret_siren_cabinet)
     if cabinet:
         return cabinet.contact_id
     cabinet = contacts.creer_personne_morale(

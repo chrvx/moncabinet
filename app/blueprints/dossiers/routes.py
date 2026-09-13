@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -6,7 +6,6 @@ from psycopg.errors import UniqueViolation
 
 from app.blueprints.dossiers.forms import (
     AjouterIntervenantForm,
-    AjouterModeleEcheanceForm,
     AjouterRoleForm,
     EcheanceForm,
     ModifierDossierForm,
@@ -18,7 +17,6 @@ from app.repositories import documents as documents_repo
 from app.repositories import echeances as echeances_repo
 from app.repositories import dossiers, matieres, reference, utilisateurs
 from app.repositories.roles import RegleRoleViolee, attribuer_role, retirer_role
-from app.securite import role_requis
 from app.services import modeles_documents
 
 bp = Blueprint("dossiers", __name__, url_prefix="/dossiers")
@@ -141,10 +139,58 @@ def _repartir_par_camp(groupes):
                     changement = True
                     break
 
+    # Rattache les rôles purement "attachés" (avocat, enfant — voir
+    # ROLES_AVOCAT_OU_LIE) à leur contact lié plutôt que de les afficher
+    # comme des intervenants indépendants : un avocat n'a de sens
+    # visuellement que rattaché à la partie qu'il représente (voir
+    # fiche.html::colonne_partie, qui les affiche en sous-ligne atténuée).
+    # Seul un contact dont TOUS les rôles sont de ce type, liés à UN SEUL
+    # autre intervenant lui-même non "attaché", est rattaché ; les autres
+    # cas (rôle mixte, contact lié absent, multiple, ou chaîné) restent
+    # affichés au premier niveau — mieux vaut un intervenant mal groupé
+    # qu'un intervenant invisible.
+    par_id = {g["contact_id"]: g for g in groupes}
+    for groupe in groupes:
+        groupe["sous_lignes"] = []
+
+    rattaches = set()
+    for groupe in groupes:
+        libelles = {r["role_libelle"] for r in groupe["roles"]}
+        contacts_lies = {r["contact_lie_id"] for r in groupe["roles"]}
+        if not libelles <= ROLES_AVOCAT_OU_LIE or len(contacts_lies) != 1:
+            continue
+        (contact_lie_id,) = contacts_lies
+        parent = par_id.get(contact_lie_id)
+        if parent is None or parent["contact_id"] == groupe["contact_id"]:
+            continue
+        libelles_parent = {r["role_libelle"] for r in parent["roles"]}
+        if libelles_parent <= ROLES_AVOCAT_OU_LIE:
+            continue
+        parent["sous_lignes"].append(groupe)
+        rattaches.add(groupe["contact_id"])
+
     resultat = {"notre_partie": [], "partie_adverse": [], "autres": []}
     for groupe in groupes:
+        if groupe["contact_id"] in rattaches:
+            continue
         resultat[camps.get(groupe["contact_id"], "autres")].append(groupe)
     return resultat
+
+
+def _choix_contacts_lies(intervenants):
+    """Choix de contact_lie_id pour les formulaires de rôle (Ajouter un
+    intervenant / Ajouter un rôle) : un contact ne doit apparaître qu'une
+    fois même s'il porte déjà plusieurs rôles sur ce dossier (ex: à la
+    fois demandeur et adversaire) — voir _grouper_intervenants, qui
+    dédoublonne de la même façon pour l'affichage."""
+    vus = set()
+    choix = [("", "—")]
+    for i in intervenants:
+        if i["contact_id"] in vus:
+            continue
+        vus.add(i["contact_id"])
+        choix.append((str(i["contact_id"]), i["nom_contact"]))
+    return choix
 
 
 def _preparer_formulaire_role(intervenants):
@@ -155,9 +201,7 @@ def _preparer_formulaire_role(intervenants):
     contact_id du formulaire de recherche principal (voir historique)."""
     formulaire = AjouterRoleForm()
     formulaire.type_role_id.choices = [(t.id, t.libelle) for t in reference.lister_types_role()]
-    formulaire.contact_lie_id.choices = [("", "—")] + [
-        (str(i["contact_id"]), i["nom_contact"]) for i in intervenants
-    ]
+    formulaire.contact_lie_id.choices = _choix_contacts_lies(intervenants)
     return formulaire
 
 
@@ -261,9 +305,7 @@ def fiche(dossier_id):
     # contact_lie ne propose que les contacts déjà présents sur ce dossier :
     # "l'avocat de l'adversaire" ou "l'enfant de tel client" n'ont de sens
     # que par rapport à quelqu'un déjà attaché à la même affaire.
-    formulaire_intervenant.contact_lie_id.choices = [("", "—")] + [
-        (str(i["contact_id"]), i["nom_contact"]) for i in intervenants
-    ]
+    formulaire_intervenant.contact_lie_id.choices = _choix_contacts_lies(intervenants)
 
     intervenants_groupes = _grouper_intervenants(intervenants)
     intervenants_par_camp = _repartir_par_camp(intervenants_groupes)
@@ -291,27 +333,6 @@ def fiche(dossier_id):
         formulaire_modif_echeance.categorie_id.choices = categorie_choix
         formulaires_echeances[e.id] = formulaire_modif_echeance
 
-    modeles_suggeres = []
-    formulaires_modeles = {}
-    if dossier.matiere_id and dossier.statut != "clos":
-        modeles_suggeres = echeances_repo.lister_modeles_non_instancies(
-            dossier_id, dossier.matiere_id
-        )
-        for m in modeles_suggeres:
-            date_calculee = (
-                dossier.date_ouverture + timedelta(days=m.delai_jours)
-                if dossier.date_ouverture
-                else None
-            )
-            formulaire_suggestion = AjouterModeleEcheanceForm(
-                modele_id=m.id,
-                categorie_id=m.categorie_id,
-                libelle=m.libelle,
-                date_echeance=date_calculee,
-            )
-            formulaire_suggestion.categorie_id.choices = categorie_choix
-            formulaires_modeles[m.id] = formulaire_suggestion
-
     return render_template(
         "dossiers/fiche.html",
         dossier=dossier,
@@ -327,8 +348,6 @@ def fiche(dossier_id):
         echeances=echeances,
         formulaire_echeance=formulaire_echeance,
         formulaires_echeances=formulaires_echeances,
-        modeles_suggeres=modeles_suggeres,
-        formulaires_modeles=formulaires_modeles,
         categorie_libelles={c.id: c.libelle for c in categories_echeance.lister(actives_seulement=False)},
         utilisateur_noms={u.id: u.nom for u in utilisateurs.lister()},
         aujourd_hui=date.today(),
@@ -400,9 +419,7 @@ def ajouter_intervenant(dossier_id):
     formulaire = AjouterIntervenantForm()
     formulaire.type_role_id.choices = [(t.id, t.libelle) for t in reference.lister_types_role()]
     intervenants = dossiers.lister_intervenants(dossier_id)
-    formulaire.contact_lie_id.choices = [("", "—")] + [
-        (str(i["contact_id"]), i["nom_contact"]) for i in intervenants
-    ]
+    formulaire.contact_lie_id.choices = _choix_contacts_lies(intervenants)
 
     if formulaire.validate_on_submit():
         contact_lie_id = int(formulaire.contact_lie_id.data) if formulaire.contact_lie_id.data else None
@@ -434,9 +451,7 @@ def ajouter_role(dossier_id, contact_id):
     formulaire = AjouterRoleForm()
     formulaire.type_role_id.choices = [(t.id, t.libelle) for t in reference.lister_types_role()]
     intervenants = dossiers.lister_intervenants(dossier_id)
-    formulaire.contact_lie_id.choices = [("", "—")] + [
-        (str(i["contact_id"]), i["nom_contact"]) for i in intervenants
-    ]
+    formulaire.contact_lie_id.choices = _choix_contacts_lies(intervenants)
 
     if formulaire.validate_on_submit():
         contact_lie_id = int(formulaire.contact_lie_id.data) if formulaire.contact_lie_id.data else None
@@ -546,28 +561,4 @@ def supprimer_echeance(dossier_id, echeance_id):
         return blocage
     echeances_repo.supprimer(echeance_id)
     flash("Échéance supprimée.", "succes")
-    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
-
-
-@bp.route("/<int:dossier_id>/echeances/modeles/<int:modele_id>", methods=["POST"])
-@login_required
-def ajouter_echeance_depuis_modele(dossier_id, modele_id):
-    blocage = _bloquer_si_clos(dossier_id)
-    if blocage:
-        return blocage
-    formulaire = AjouterModeleEcheanceForm()
-    formulaire.categorie_id.choices = [(c.id, c.libelle) for c in categories_echeance.lister()]
-    if formulaire.validate_on_submit():
-        echeances_repo.creer(
-            dossier_id=dossier_id,
-            categorie_id=int(formulaire.categorie_id.data),
-            libelle=formulaire.libelle.data,
-            date_echeance=formulaire.date_echeance.data,
-            heure_echeance=formulaire.heure_echeance.data,
-            notes=None,
-            utilisateur_id=current_user.id,
-        )
-        flash("Échéance ajoutée.", "succes")
-    else:
-        flash("Le formulaire contient des erreurs.", "erreur")
     return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))

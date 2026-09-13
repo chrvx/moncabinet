@@ -15,14 +15,12 @@ from app.blueprints.contacts.forms import (
     NouvelOfficeNotarialAnnuaireForm,
     NouvellePersonneMoraleForm,
     NouvellePersonnePhysiqueForm,
-    PartagerAdresseForm,
     QualificationAvocatForm,
     QualificationCommissaireJusticeForm,
     QualificationNotaireForm,
 )
 from app.blueprints.dossiers.forms import NouveauDossierForm
 from app.repositories import contacts, coordonnees, dossiers, qualifications, reference
-from app.securite import role_requis
 from app.services import annuaire_avocats, annuaire_notaires, import_avocats, import_notaires
 
 bp = Blueprint("contacts", __name__, url_prefix="/contacts")
@@ -135,6 +133,7 @@ def api_tableau():
             "prenom": r.prenom,
             "telephone": r.telephone,
             "email": r.email,
+            "est_avocat": r.est_avocat,
         }
         for r in resultats
     ])
@@ -153,6 +152,27 @@ def api_suggestions():
     return jsonify([
         {"contact_id": r.contact_id, "type_contact": r.type_contact, "libelle": r.libelle}
         for r in resultats
+    ])
+
+
+def _libelle_adresse(adresse) -> str:
+    debut = f"{adresse.numero_voie} " if adresse.numero_voie else ""
+    return f"{debut}{adresse.libelle_voie}, {adresse.code_postal} {adresse.commune}"
+
+
+@bp.route("/api/adresses")
+@login_required
+def api_adresses():
+    """Endpoint JSON listant les adresses actives d'un contact, pour
+    proposer de les réutiliser sur un autre contact (partage d'adresse,
+    ex: un couple au même domicile) sans recharger la page — voir
+    static/js/recherche_contact.js, mode "partage-adresse"."""
+    contact_id = request.args.get("contact_id", type=int)
+    if contact_id is None:
+        return jsonify([])
+    return jsonify([
+        {"adresse_id": adresse.id, "libelle": _libelle_adresse(adresse)}
+        for adresse, _lien in coordonnees.lister_adresses(contact_id)
     ])
 
 
@@ -389,13 +409,6 @@ ROLES_NOTRE_PARTIE = {"client", "demandeur"}
 ROLES_PARTIE_ADVERSE = {"adversaire", "défendeur"}
 
 
-def _initiales(contact, personne) -> str:
-    if contact.type_contact == "personne_physique":
-        return ((personne.prenom[:1] if personne.prenom else "") + personne.nom[:1]).upper()
-    mots = personne.raison_sociale.split()
-    return "".join(m[0] for m in mots[:2]).upper() or "?"
-
-
 def _badge_qualite(dossiers_du_contact, est_avocat) -> tuple[str, str] | tuple[None, None]:
     """Résume en une étiquette la qualité la plus significative de ce
     contact, à partir des rôles qu'il tient dans ses dossiers — affichée
@@ -438,6 +451,7 @@ def fiche(contact_id):
     cabinet_avocat = None
     formulaire_avocat = formulaire_notaire = formulaire_commissaire_justice = None
     avocats_du_cabinet = []
+    barreaux_du_cabinet = []
     if contact.type_contact == "personne_physique":
         personne = contacts.recuperer_personne_physique(contact_id)
         formulaire_modif = _preparer_formulaire_physique(personne)
@@ -487,6 +501,7 @@ def fiche(contact_id):
         formulaire_modif = ModifierPersonneMoraleForm(obj=personne)
         titre = personne.raison_sociale
         avocats_du_cabinet = qualifications.lister_avocats_par_cabinet(contact_id)
+        barreaux_du_cabinet = qualifications.lister_barreaux_du_cabinet(contact_id)
 
     formulaire_adresse = AjouterAdresseForm()
     formulaire_adresse.pays_id.choices = _choix_avec_vide(
@@ -494,7 +509,6 @@ def fiche(contact_id):
     )
     formulaire_telephone = AjouterTelephoneForm()
     formulaire_email = AjouterEmailForm()
-    formulaire_partage = PartagerAdresseForm()
 
     adresses = [
         (
@@ -526,19 +540,6 @@ def fiche(contact_id):
     dossiers_du_contact = dossiers.lister_pour_contact(contact_id)
     formulaire_nouveau_dossier = NouveauDossierForm(contact_id=contact_id)
 
-    # Recherche d'un contact dont on veut réutiliser l'adresse (couple
-    # partageant un domicile) : déclenchée par ?partage_terme=... sur cette
-    # même page, pour éviter une page séparée.
-    partage_terme = request.args.get("partage_terme", "").strip()
-    partage_resultats = []
-    if partage_terme:
-        for r in contacts.rechercher_par_nom(partage_terme):
-            if r.contact_id == contact_id:
-                continue
-            adresses_autre = coordonnees.lister_adresses(r.contact_id)
-            if adresses_autre:
-                partage_resultats.append((r, adresses_autre))
-
     est_avocat = profession_actuelle == "avocat"
     badge_libelle, badge_classe = _badge_qualite(dossiers_du_contact, est_avocat)
 
@@ -548,7 +549,6 @@ def fiche(contact_id):
         contact=contact,
         personne=personne,
         titre=titre,
-        initiales=_initiales(contact, personne),
         badge_libelle=badge_libelle,
         badge_classe=badge_classe,
         nb_dossiers_ouverts=sum(1 for d, _ in dossiers_du_contact if d.statut == "ouvert"),
@@ -557,20 +557,18 @@ def fiche(contact_id):
         formulaire_adresse=formulaire_adresse,
         formulaire_telephone=formulaire_telephone,
         formulaire_email=formulaire_email,
-        formulaire_partage=formulaire_partage,
         adresses=adresses,
         telephones=telephones,
         emails=emails,
         dossiers_du_contact=dossiers_du_contact,
         formulaire_nouveau_dossier=formulaire_nouveau_dossier,
-        partage_terme=partage_terme,
-        partage_resultats=partage_resultats,
         profession_actuelle=profession_actuelle,
         avocat=avocat,
         cabinet_avocat=cabinet_avocat,
         notaire=notaire,
         commissaire_justice=commissaire_justice,
         avocats_du_cabinet=avocats_du_cabinet,
+        barreaux_du_cabinet=barreaux_du_cabinet,
         formulaire_avocat=formulaire_avocat,
         formulaire_notaire=formulaire_notaire,
         formulaire_commissaire_justice=formulaire_commissaire_justice,

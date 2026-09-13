@@ -24,6 +24,9 @@
         personne_morale:
             '<svg class="icone-type" viewBox="0 0 24 24"><title>Personne morale</title>' +
             '<path d="M5 21V4h9v17M14 21V9h5v12"/><path d="M8 8h2M8 12h2M8 16h2"/></svg>',
+        avocat:
+            '<svg class="icone-type" viewBox="0 0 24 24"><title>Avocat</title>' +
+            '<circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-3.8 4-5.8 7-5.8s6 2 7 5.8"/><path d="M11 14.4h2l1 4.8h-4z"/></svg>',
     };
 
     champ.addEventListener("input", function () {
@@ -64,7 +67,7 @@
                 : "";
             return (
                 "<tr>" +
-                "<td>" + icones[r.type_contact] + "</td>" +
+                "<td>" + (r.est_avocat ? icones.avocat : icones[r.type_contact]) + "</td>" +
                 '<td><a href="/contacts/' + r.contact_id + '">' + echapper(r.nom) + "</a></td>" +
                 "<td>" + echapper(r.prenom || "") + "</td>" +
                 "<td>" + echapper(r.telephone || "") + "</td>" +

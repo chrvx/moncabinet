@@ -10,7 +10,7 @@
 
 {% macro libelle_selection(field) %}
     {%- for valeur, texte in field.choices -%}
-        {%- if valeur and valeur == (field.data or "") -%}{{ texte }}{%- endif -%}
+        {%- if valeur and valeur|string == (field.data or "")|string -%}{{ texte }}{%- endif -%}
     {%- endfor -%}
 {% endmacro %}
 
@@ -18,12 +18,55 @@
     {% if valeur %}<p><strong>{{ etiquette }} :</strong> {{ valeur }}</p>{% endif %}
 {% endmacro %}
 
-{% macro icone_type_contact(type_contact) %}
-{%- if type_contact == "personne_physique" -%}
+{% macro icone_type_contact(type_contact, est_avocat=False) %}
+{%- if est_avocat -%}
+<svg class="icone-type" viewBox="0 0 24 24"><title>Avocat</title><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-3.8 4-5.8 7-5.8s6 2 7 5.8"/><path d="M11 14.4h2l1 4.8h-4z"/></svg>
+{%- elif type_contact == "personne_physique" -%}
 <svg class="icone-type" viewBox="0 0 24 24"><title>Personne physique</title><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-3.8 4-5.8 7-5.8s6 2 7 5.8"/></svg>
 {%- else -%}
 <svg class="icone-type" viewBox="0 0 24 24"><title>Personne morale</title><path d="M5 21V4h9v17M14 21V9h5v12"/><path d="M8 8h2M8 12h2M8 16h2"/></svg>
 {%- endif -%}
+{% endmacro %}
+
+{% macro barre_tuiles_contacts() %}
+<div class="grille-tuiles">
+    <a class="tuile" href="{{ url_for('contacts.nouveau') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Nouveau contact</strong>
+            <span>Créer une fiche contact</span>
+        </span>
+    </a>
+    <a class="tuile" href="{{ url_for('contacts.liste_avocats') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c1-3.8 4-5.8 7-5.8s6 2 7 5.8"/><path d="M11 14.4h2l1 4.8h-4z"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Avocats</strong>
+            <span>Voir tous les avocats</span>
+        </span>
+    </a>
+    <a class="tuile" href="{{ url_for('contacts.liste_clients') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4-3 7-7 8-4-1-7-4-7-8V6z"/><path d="M9 12l2 2 4-4"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Clients</strong>
+            <span>Voir tous les clients</span>
+        </span>
+    </a>
+    <a class="tuile" href="{{ url_for('contacts.liste_adversaires') }}">
+        <span class="tuile-icone">
+            <svg viewBox="0 0 24 24"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4"/></svg>
+        </span>
+        <span class="tuile-texte">
+            <strong>Adversaires</strong>
+            <span>Voir tous les adversaires</span>
+        </span>
+    </a>
+</div>
 {% endmacro %}
 
 {% macro tableau_contacts(resultats) %}
@@ -40,7 +83,7 @@
     <tbody>
     {% for r in resultats %}
         <tr>
-            <td>{{ icone_type_contact(r.type_contact) }}</td>
+            <td>{{ icone_type_contact(r.type_contact, r.est_avocat) }}</td>
             <td><a href="{{ url_for('contacts.fiche', contact_id=r.contact_id) }}">{{ r.nom }}</a></td>
             <td>{{ r.prenom or "" }}</td>
             <td>{{ r.telephone or "" }}</td>

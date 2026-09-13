@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import libelle_selection, info %}
+{% from "_macros.html" import libelle_selection, info, icone_type_contact %}
 {% block titre %}{{ titre }}{% endblock %}
 {% block contenu %}
 <p><a href="{{ url_for('contacts.recherche') }}">&larr; Retour à la recherche</a></p>
@@ -10,10 +10,19 @@
 
 <div class="carte carte-identite">
     <div class="identite-entete">
-        <span class="avatar-identite">{{ initiales }}</span>
+        <span class="avatar-identite">{{ icone_type_contact(contact.type_contact, est_avocat) }}</span>
         <div>
             <p class="identite-nom">{{ titre }}</p>
             {% if badge_libelle %}<span class="role-badge {{ badge_classe }}">{{ badge_libelle }}</span>{% endif %}
+            {% if est_avocat and avocat and avocat.barreau_id %}
+                <span class="role-badge barreau">{{ libelle_selection(formulaire_avocat.barreau_id) }}</span>
+            {% endif %}
+            {% if avocats_du_cabinet %}
+                <span class="role-badge avocat">Cabinet d'avocat</span>
+                {% for b in barreaux_du_cabinet %}
+                    <span class="role-badge barreau">{{ b.libelle }}</span>
+                {% endfor %}
+            {% endif %}
         </div>
     </div>
 
@@ -22,15 +31,23 @@
             {% if not est_avocat and personne.profession %}
                 <p><strong>Profession</strong>{{ personne.profession }}</p>
             {% endif %}
+            {% if est_avocat and cabinet_avocat %}
+                <p><strong>Cabinet :</strong> <a href="{{ url_for('contacts.fiche', contact_id=cabinet_avocat.contact_id) }}">{{ cabinet_avocat.raison_sociale }}</a></p>
+            {% endif %}
         {% else %}
             {% if personne.forme %}<p><strong>Forme juridique</strong>{{ personne.forme }}</p>{% endif %}
+            {% if avocats_du_cabinet %}
+                <p><strong>Avocats :</strong>
+                    {% for a in avocats_du_cabinet %}<a href="{{ url_for('contacts.fiche', contact_id=a.contact_id) }}">{{ a.libelle }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+                </p>
+            {% endif %}
         {% endif %}
-        {% if emails %}<p><strong>Email</strong><a href="mailto:{{ emails[0][0].adresse_email }}">{{ emails[0][0].adresse_email }}</a></p>{% endif %}
-        {% if telephones %}<p><strong>Téléphone</strong>{{ telephones[0][0].numero }}</p>{% endif %}
+        {% if emails %}<p><strong>Email :</strong><a href="mailto:{{ emails[0][0].adresse_email }}">{{ emails[0][0].adresse_email }}</a></p>{% endif %}
+        {% if telephones %}<p><strong>Téléphone :</strong>{{ telephones[0][0].numero }}</p>{% endif %}
         {% if adresses %}
-            <p><strong>Adresse</strong>
+            <p><strong>Adresse :</strong>
                 {% set a = adresses[0][0] %}
-                {% if a.numero_voie %}{{ a.numero_voie }} {% endif %}{{ a.libelle_voie }}, {{ a.code_postal }} {{ a.commune }}
+                {% if a.numero_voie %}{{ a.numero_voie }} {% endif %}{{ a.libelle_voie }}<br>{{ a.code_postal }} {{ a.commune }}
             </p>
         {% endif %}
         {% if not emails and not telephones and not adresses %}
@@ -93,9 +110,6 @@
     {{ info(formulaire_modif.genre.label.text, libelle_selection(formulaire_modif.genre)) }}
     {% if est_avocat %}
         {{ info("Barreau", libelle_selection(formulaire_avocat.barreau_id)) }}
-        {% if cabinet_avocat %}
-        <p><strong>Cabinet :</strong> <a href="{{ url_for('contacts.fiche', contact_id=cabinet_avocat.contact_id) }}">{{ cabinet_avocat.raison_sociale }}</a></p>
-        {% endif %}
     {% endif %}
     {% if not est_avocat %}
         {{ info(formulaire_modif.date_naissance.label.text, personne.date_naissance) }}
@@ -252,21 +266,6 @@
 </div>
 {% endif %}
 
-{% if contact.type_contact == "personne_morale" %}
-<div class="carte">
-<h2>Avocats rattachés</h2>
-{% if avocats_du_cabinet %}
-    <ul>
-    {% for a in avocats_du_cabinet %}
-        <li><a href="{{ url_for('contacts.fiche', contact_id=a.contact_id) }}">{{ a.libelle }}</a></li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>Aucun avocat rattaché à ce cabinet.</p>
-{% endif %}
-</div>
-{% endif %}
-
 </div>
 <div class="colonne">
 
@@ -349,39 +348,16 @@
 </form>
 </details>
 
-<details{% if partage_terme %} open{% endif %}>
+<details>
 <summary>Partager l'adresse d'un contact existant</summary>
-<form method="get" id="formulaire-partage">
-    <input type="text" name="partage_terme" id="partage-terme" value="{{ partage_terme }}"
+<p>
+    <input type="text" id="partage-terme"
            placeholder="Nom du contact" data-suggestions="suggestions-partage"
-           data-mode="remplir" autocomplete="off">
-    <button type="submit">Chercher</button>
-</form>
+           data-mode="partage-adresse"
+           data-lier-url="{{ url_for('contacts.lier_adresse', contact_id=contact.id) }}"
+           autocomplete="off">
+</p>
 <div id="suggestions-partage"></div>
-{% if partage_terme %}
-    {% if partage_resultats %}
-        <ul>
-        {% for r, adresses_autre in partage_resultats %}
-            <li>
-                {{ r.libelle }}
-                <ul>
-                {% for adresse, lien in adresses_autre %}
-                    <li>
-                        {% if adresse.numero_voie %}{{ adresse.numero_voie }} {% endif %}{{ adresse.libelle_voie }}, {{ adresse.code_postal }} {{ adresse.commune }}
-                        <form method="post" action="{{ url_for('contacts.lier_adresse', contact_id=contact.id) }}" style="display:inline">
-                            <input type="hidden" name="adresse_id" value="{{ adresse.id }}">
-                            <button type="submit">Lier cette adresse</button>
-                        </form>
-                    </li>
-                {% endfor %}
-                </ul>
-            </li>
-        {% endfor %}
-        </ul>
-    {% else %}
-        <p>Aucun contact avec une adresse active ne correspond.</p>
-    {% endif %}
-{% endif %}
 </details>
 </div>
 

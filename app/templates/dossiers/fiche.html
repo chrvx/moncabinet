@@ -71,6 +71,38 @@
     {% endif %}
 </div>
 
+{% macro roles_contact(roles, contact_id=None, afficher_lien=True) %}
+<ul class="roles-contact">
+{% for i in roles %}
+    <li>
+        <span class="role-badge {{ i.role_classe }}">
+            {{ i.role_libelle }}
+            {% if dossier.statut != "clos" %}
+                <form method="post" action="{{ url_for('dossiers.retirer_intervenant', dossier_id=dossier.id, role_contact_id=i.role_contact_id) }}"
+                      style="display:inline" onsubmit="return confirm('Retirer ce rôle ?');">
+                    <button type="submit" class="role-badge-retirer" title="Retirer ce rôle" aria-label="Retirer ce rôle">&times;</button>
+                </form>
+            {% endif %}
+        </span>
+        {% if afficher_lien and i.nom_contact_lie %}<span class="aide">(lié à {{ i.nom_contact_lie }})</span>{% endif %}
+    </li>
+{% endfor %}
+{% if contact_id and dossier.statut != "clos" %}
+    <li class="li-ajouter-role">
+        <details class="ajouter-role">
+        <summary title="Ajouter un rôle à ce contact" aria-label="Ajouter un rôle à ce contact">+</summary>
+        <form method="post" action="{{ url_for('dossiers.ajouter_role', dossier_id=dossier.id, contact_id=contact_id) }}">
+            {{ formulaire_role.hidden_tag() }}
+            <p>{{ formulaire_role.type_role_id.label }} {{ formulaire_role.type_role_id() }}</p>
+            <p>{{ formulaire_role.contact_lie_id.label }} {{ formulaire_role.contact_lie_id() }}</p>
+            {{ formulaire_role.soumettre() }}
+        </form>
+        </details>
+    </li>
+{% endif %}
+</ul>
+{% endmacro %}
+
 {% macro colonne_partie(titre, classe, groupes) %}
 <div class="partie">
     <h3 class="partie-titre {{ classe }}">{{ titre }}</h3>
@@ -79,29 +111,16 @@
     {% for groupe in groupes %}
         <li>
             <a href="{{ url_for('contacts.fiche', contact_id=groupe.contact_id) }}">{{ groupe.nom_contact }}</a>
-            <ul class="roles-contact">
-            {% for i in groupe.roles %}
-                <li>
-                    <span class="role-badge {{ i.role_classe }}">{{ i.role_libelle }}</span>
-                    {% if i.nom_contact_lie %}<span class="aide">(lié à {{ i.nom_contact_lie }})</span>{% endif %}
-                    {% if dossier.statut != "clos" %}
-                        <form method="post" action="{{ url_for('dossiers.retirer_intervenant', dossier_id=dossier.id, role_contact_id=i.role_contact_id) }}" style="display:inline">
-                            <button type="submit">Retirer</button>
-                        </form>
-                    {% endif %}
-                </li>
-            {% endfor %}
-            </ul>
-            {% if dossier.statut != "clos" %}
-                <details>
-                <summary>Ajouter un rôle à ce contact</summary>
-                <form method="post" action="{{ url_for('dossiers.ajouter_role', dossier_id=dossier.id, contact_id=groupe.contact_id) }}">
-                    {{ formulaire_role.hidden_tag() }}
-                    <p>{{ formulaire_role.type_role_id.label }} {{ formulaire_role.type_role_id() }}</p>
-                    <p>{{ formulaire_role.contact_lie_id.label }} {{ formulaire_role.contact_lie_id() }}</p>
-                    {{ formulaire_role.soumettre() }}
-                </form>
-                </details>
+            {{ roles_contact(groupe.roles, contact_id=groupe.contact_id) }}
+            {% if groupe.sous_lignes %}
+                <ul class="sous-intervenants">
+                {% for sous in groupe.sous_lignes %}
+                    <li>
+                        <a href="{{ url_for('contacts.fiche', contact_id=sous.contact_id) }}">{{ sous.nom_contact }}</a>
+                        {{ roles_contact(sous.roles, afficher_lien=False) }}
+                    </li>
+                {% endfor %}
+                </ul>
             {% endif %}
         </li>
     {% endfor %}
@@ -112,7 +131,18 @@
 </div>
 {% endmacro %}
 
-<h2>Intervenants</h2>
+<div class="onglets-dossier">
+    <input type="radio" name="onglet-dossier" id="onglet-intervenants" class="onglet-radio" checked>
+    <input type="radio" name="onglet-dossier" id="onglet-echeances" class="onglet-radio">
+    <input type="radio" name="onglet-dossier" id="onglet-documents" class="onglet-radio">
+    <div class="onglets-nav">
+        <label for="onglet-intervenants">Intervenants</label>
+        <label for="onglet-echeances">Échéances</label>
+        <label for="onglet-documents">Documents</label>
+    </div>
+
+    <div class="onglet-panneau" id="panneau-intervenants">
+
 <div class="intervenants-parties">
     {{ colonne_partie("Notre partie", "notre", intervenants_par_camp.notre_partie) }}
     {{ colonne_partie("Partie adverse", "adverse", intervenants_par_camp.partie_adverse) }}
@@ -141,29 +171,9 @@
 </details>
 {% endif %}
 
-<h2>Échéances</h2>
+    </div>
 
-{% if modeles_suggeres %}
-<div class="carte carte-suggestions">
-    <h3>Échéances suggérées pour cette matière</h3>
-    <ul class="liste-suggestions">
-    {% for modele in modeles_suggeres %}
-        {% set formulaire_suggestion = formulaires_modeles[modele.id] %}
-        <li>
-            <form method="post" action="{{ url_for('dossiers.ajouter_echeance_depuis_modele', dossier_id=dossier.id, modele_id=modele.id) }}">
-                {{ formulaire_suggestion.hidden_tag() }}
-                {{ formulaire_suggestion.modele_id() }}
-                {{ formulaire_suggestion.categorie_id() }}
-                <span class="suggestion-libelle">{{ formulaire_suggestion.libelle(size=28) }}</span>
-                {{ formulaire_suggestion.date_echeance() }}
-                {{ formulaire_suggestion.heure_echeance() }}
-                {{ formulaire_suggestion.soumettre() }}
-            </form>
-        </li>
-    {% endfor %}
-    </ul>
-</div>
-{% endif %}
+    <div class="onglet-panneau" id="panneau-echeances">
 
 {% if echeances %}
 <ul class="liste-echeances">
@@ -239,7 +249,10 @@
 </details>
 {% endif %}
 
-<h2>Documents</h2>
+    </div>
+
+    <div class="onglet-panneau" id="panneau-documents">
+
 {% set libelles_origine = {"genere": "Généré", "email": "E-mail", "depose": "Déposé"} %}
 {% if documents %}
 <ul class="liste-documents">
@@ -287,6 +300,9 @@
     {% endif %}
     <p><a href="{{ url_for('documents.deposer', dossier_id=dossier.id) }}">Déposer un fichier</a></p>
 {% endif %}
+
+    </div>
+</div>
 
 <script src="{{ url_for('static', filename='js/recherche_contact.js') }}"></script>
 {% endblock %}

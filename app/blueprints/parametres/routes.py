@@ -5,13 +5,11 @@ from psycopg.errors import UniqueViolation
 from app.blueprints.parametres.forms import (
     ChangerCategorieMatiereForm,
     NouveauBarreauForm,
-    NouveauModeleEcheanceForm,
     NouvelleCategorieEcheanceForm,
     NouvelleCategorieMatiereForm,
     NouvelleMatiereForm,
 )
 from app.repositories import categories_echeance, categories_matiere
-from app.repositories import echeances as echeances_repo
 from app.repositories import matieres, reference
 from app.securite import role_requis
 
@@ -155,60 +153,6 @@ def creer_categorie_matiere():
 def basculer_categorie_matiere(categorie_id):
     categories_matiere.basculer_actif(categorie_id)
     return redirect(url_for("parametres.liste_categories_matiere"))
-
-
-# --- Modèles d'échéance (réservé avocat / collaborateur) --------------------
-
-
-def _choix_categories_echeance():
-    return [(c.id, c.libelle) for c in categories_echeance.lister()]
-
-
-@bp.route("/modeles-echeance")
-@login_required
-@role_requis("avocat", "collaborateur")
-def liste_modeles_echeance():
-    formulaire = NouveauModeleEcheanceForm()
-    formulaire.matiere_id.choices = [
-        (m.id, m.libelle) for m in matieres.lister(actives_seulement=False)
-    ]
-    formulaire.categorie_id.choices = _choix_categories_echeance()
-    return render_template(
-        "parametres/modeles_echeance.html",
-        modeles=echeances_repo.lister_tous_modeles(),
-        categorie_libelles={c.id: c.libelle for c in categories_echeance.lister(actives_seulement=False)},
-        formulaire=formulaire,
-    )
-
-
-@bp.route("/modeles-echeance", methods=["POST"])
-@login_required
-@role_requis("avocat", "collaborateur")
-def creer_modele_echeance():
-    formulaire = NouveauModeleEcheanceForm()
-    formulaire.matiere_id.choices = [
-        (m.id, m.libelle) for m in matieres.lister(actives_seulement=False)
-    ]
-    formulaire.categorie_id.choices = _choix_categories_echeance()
-    if formulaire.validate_on_submit():
-        echeances_repo.creer_modele(
-            matiere_id=int(formulaire.matiere_id.data),
-            libelle=formulaire.libelle.data,
-            categorie_id=int(formulaire.categorie_id.data),
-            delai_jours=formulaire.delai_jours.data,
-        )
-        flash("Modèle d'échéance ajouté.", "succes")
-    else:
-        flash("Le formulaire contient des erreurs.", "erreur")
-    return redirect(url_for("parametres.liste_modeles_echeance"))
-
-
-@bp.route("/modeles-echeance/<int:modele_id>/basculer", methods=["POST"])
-@login_required
-@role_requis("avocat", "collaborateur")
-def basculer_modele_echeance(modele_id):
-    echeances_repo.basculer_actif_modele(modele_id)
-    return redirect(url_for("parametres.liste_modeles_echeance"))
 
 
 # --- Catégories d'échéance (réservé avocat / collaborateur) -----------------

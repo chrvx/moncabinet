@@ -128,6 +128,29 @@ def recuperer_personne_morale_par_siren(siren: str) -> PersonneMorale | None:
             return cur.fetchone()
 
 
+def recuperer_personne_morale_par_siren_et_ville(siren: str, ville: str) -> PersonneMorale | None:
+    """Comme recuperer_personne_morale_par_siren, mais restreint aux contacts
+    ayant une adresse active dans cette ville. Le SIREN identifie l'entité
+    juridique, pas l'établissement : une structure nationale (ex: FIDAL) a
+    un SIREN unique mais plusieurs bureaux, donc plusieurs contacts
+    personne_morale distincts — matcher par SIREN seul les confondrait tous
+    en un seul. Voir _resoudre_cabinet dans app/services/import_avocats.py."""
+    with db.pool.connection() as conn:
+        with conn.cursor(row_factory=class_row(PersonneMorale)) as cur:
+            cur.execute(
+                """
+                SELECT pm.contact_id, pm.raison_sociale, pm.forme, pm.siren
+                FROM personne_morale pm
+                JOIN contact_adresse ca ON ca.contact_id = pm.contact_id AND ca.date_fin IS NULL
+                JOIN adresse a ON a.id = ca.adresse_id
+                WHERE pm.siren = %s AND a.commune ILIKE %s
+                LIMIT 1
+                """,
+                (siren, ville),
+            )
+            return cur.fetchone()
+
+
 def recuperer_personne_morale(contact_id: int) -> PersonneMorale | None:
     with db.pool.connection() as conn:
         with conn.cursor(row_factory=class_row(PersonneMorale)) as cur:
@@ -367,10 +390,11 @@ def lister_avec_coordonnees(
                 _CTE_CONTACTS_AVEC_COORDONNEES
                 + f"""
                 SELECT b.contact_id, b.type_contact, b.nom, b.prenom,
-                       tel.telephone, mail.email
+                       tel.telephone, mail.email, a.contact_id IS NOT NULL AS est_avocat
                 FROM base b
                 LEFT JOIN tel ON tel.contact_id = b.contact_id
                 LEFT JOIN mail ON mail.contact_id = b.contact_id
+                LEFT JOIN avocat a ON a.contact_id = b.contact_id
                 {clause_where}
                 ORDER BY b.nom
                 {clause_limite}

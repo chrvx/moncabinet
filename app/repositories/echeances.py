@@ -3,7 +3,7 @@ from datetime import date, time
 from psycopg.rows import class_row
 
 from app import db
-from app.modeles import Echeance, ModeleEcheance
+from app.modeles import Echeance
 
 _COLONNES = """
     id, dossier_id, categorie_id, libelle, date_echeance, heure_echeance,
@@ -164,87 +164,3 @@ def compter_a_venir() -> int:
                 """
             )
             return cur.fetchone()[0]
-
-
-# --- Modèles d'échéance (catalogue par matière) -----------------------------
-
-
-def lister_modeles_pour_matiere(matiere_id: int) -> list[ModeleEcheance]:
-    with db.pool.connection() as conn:
-        with conn.cursor(row_factory=class_row(ModeleEcheance)) as cur:
-            cur.execute(
-                """
-                SELECT id, matiere_id, libelle, categorie_id, delai_jours, actif
-                FROM matiere_modele_echeance
-                WHERE matiere_id = %s AND actif
-                ORDER BY delai_jours, libelle
-                """,
-                (matiere_id,),
-            )
-            return cur.fetchall()
-
-
-def lister_tous_modeles() -> list[tuple[ModeleEcheance, str]]:
-    """Le catalogue complet (actifs et inactifs), avec le libellé de la
-    matière — utilisé par l'écran d'administration parametres/."""
-    with db.pool.connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT me.id, me.matiere_id, me.libelle, me.categorie_id,
-                       me.delai_jours, me.actif, m.libelle
-                FROM matiere_modele_echeance me
-                JOIN matiere m ON m.id = me.matiere_id
-                ORDER BY m.libelle, me.delai_jours, me.libelle
-                """
-            )
-            return [(ModeleEcheance(*ligne[0:6]), ligne[6]) for ligne in cur.fetchall()]
-
-
-def creer_modele(matiere_id: int, libelle: str, categorie_id: int, delai_jours: int) -> ModeleEcheance:
-    with db.pool.connection() as conn:
-        with conn.cursor(row_factory=class_row(ModeleEcheance)) as cur:
-            cur.execute(
-                """
-                INSERT INTO matiere_modele_echeance (matiere_id, libelle, categorie_id, delai_jours)
-                VALUES (%s, %s, %s, %s)
-                RETURNING id, matiere_id, libelle, categorie_id, delai_jours, actif
-                """,
-                (matiere_id, libelle.strip(), categorie_id, delai_jours),
-            )
-            conn.commit()
-            return cur.fetchone()
-
-
-def basculer_actif_modele(modele_id: int) -> None:
-    with db.pool.connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "UPDATE matiere_modele_echeance SET actif = NOT actif WHERE id = %s",
-                (modele_id,),
-            )
-            conn.commit()
-
-
-def lister_modeles_non_instancies(dossier_id: int, matiere_id: int) -> list[ModeleEcheance]:
-    """Modèles actifs de la matière du dossier dont le libellé n'a pas déjà
-    été instancié comme échéance sur ce dossier — évite de re-suggérer une
-    échéance déjà ajoutée. Comparaison sur libelle plutôt que sur une clé
-    étrangère : une fois instanciée, une échéance est un enregistrement
-    ordinaire, librement modifiable, sans lien conservé vers son modèle
-    d'origine."""
-    with db.pool.connection() as conn:
-        with conn.cursor(row_factory=class_row(ModeleEcheance)) as cur:
-            cur.execute(
-                """
-                SELECT id, matiere_id, libelle, categorie_id, delai_jours, actif
-                FROM matiere_modele_echeance
-                WHERE matiere_id = %s AND actif
-                    AND libelle NOT IN (
-                        SELECT libelle FROM echeance WHERE dossier_id = %s
-                    )
-                ORDER BY delai_jours, libelle
-                """,
-                (matiere_id, dossier_id),
-            )
-            return cur.fetchall()

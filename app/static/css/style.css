@@ -462,6 +462,8 @@ th, td {
     border-bottom: 1px solid var(--bordure);
 }
 
+tbody tr:hover { background: var(--fond); }
+
 th {
     font-size: 0.82rem;
     color: var(--texte-attenue);
@@ -629,7 +631,8 @@ h2.titre-section a { font-family: var(--police-corps); font-size: 0.82rem; font-
 
 .carte-identite { padding: 1.5rem 1.5rem 1.25rem; }
 .identite-entete { display: flex; align-items: center; gap: 1rem; padding-bottom: 1.15rem; margin-bottom: 1.15rem; border-bottom: 1px solid var(--bordure); }
-.avatar-identite { width: 54px; height: 54px; flex-shrink: 0; border-radius: 50%; background: var(--primaire-clair); color: var(--primaire-survol); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.05rem; }
+.avatar-identite { width: 54px; height: 54px; flex-shrink: 0; border-radius: 50%; background: var(--primaire-clair); color: var(--primaire-survol); display: inline-flex; align-items: center; justify-content: center; }
+.avatar-identite .icone-type { width: 28px; height: 28px; }
 .identite-nom { font-family: var(--police-titre); font-size: 1.15rem; font-weight: 700; margin: 0 0 0.35rem; }
 .identite-champs { display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.15rem; }
 .identite-champs p { margin: 0; font-size: 0.92rem; }
@@ -641,10 +644,22 @@ h2.titre-section a { font-family: var(--police-corps); font-size: 0.82rem; font-
 .identite-stats .valeur { display: block; font-family: var(--police-titre); font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .identite-stats .libelle { display: block; font-size: 0.78rem; color: var(--texte-attenue); margin-top: 0.1rem; }
 
-.role-badge { display: inline-block; font-size: 0.78rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 6px; }
+.role-badge { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 6px; }
 .role-badge.client { color: var(--succes); background: var(--succes-clair); }
 .role-badge.adverse { color: var(--danger); background: var(--danger-clair); }
 .role-badge.avocat { color: var(--primaire-survol); background: var(--primaire-clair); }
+.role-badge.barreau { color: var(--texte-attenue); background: var(--fond); border: 1px solid var(--bordure); }
+.role-badge-retirer {
+    all: unset;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1rem; height: 1rem;
+    border-radius: 50%;
+    line-height: 1;
+    font-size: 0.9rem;
+    opacity: 0.55;
+}
+.role-badge-retirer:hover, .role-badge-retirer:focus-visible { opacity: 1; background: rgba(0, 0, 0, 0.12); }
 
 /* ---------- Dossier : résumé, parties, documents ---------- */
 
@@ -683,7 +698,48 @@ h2.titre-section a { font-family: var(--police-corps); font-size: 0.82rem; font-
     display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.7rem;
 }
 .liste-partie .roles-contact li { padding: 0; display: flex; align-items: center; gap: 0.4rem; }
-.liste-partie details { margin-top: 0.6rem; }
+.liste-partie .roles-contact li:has(.ajouter-role[open]) { flex-basis: 100%; }
+.ajouter-role summary {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.3rem; height: 1.3rem; border-radius: 50%;
+    color: var(--texte-attenue);
+    cursor: pointer; font-size: 0.95rem; line-height: 1;
+    list-style: none;
+}
+.ajouter-role summary::-webkit-details-marker { display: none; }
+.ajouter-role summary::marker { display: none; }
+.ajouter-role summary::before { content: none; }
+.ajouter-role summary:hover { color: var(--primaire-survol); background: var(--primaire-clair); }
+.ajouter-role[open] summary { margin-bottom: 0.5rem; }
+
+.sous-intervenants {
+    list-style: none; margin: 0.6rem 0 0; padding: 0 0 0 0.9rem;
+    border-left: 2px solid var(--bordure);
+    display: flex; flex-direction: column; gap: 0.5rem;
+}
+.sous-intervenants > li { font-size: 0.82rem; }
+.sous-intervenants > li > a { color: var(--texte-attenue); }
+.sous-intervenants .roles-contact { border-top: none; margin-top: 0.2rem; padding-top: 0; }
+.sous-intervenants .role-badge { font-size: 0.72rem; padding: 0.1rem 0.45rem; }
+
+.onglets-dossier { margin-top: 1.5rem; }
+.onglet-radio { position: absolute; opacity: 0; pointer-events: none; }
+.onglets-nav { display: flex; gap: 1.5rem; border-bottom: 1px solid var(--bordure); margin-bottom: 1.25rem; }
+.onglets-nav label {
+    padding: 0.6rem 0.1rem; cursor: pointer; font-weight: 700;
+    font-family: var(--police-titre); font-size: 1.05rem;
+    color: var(--texte-attenue); border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+.onglet-panneau { display: none; }
+#onglet-intervenants:checked ~ .onglets-nav label[for="onglet-intervenants"],
+#onglet-echeances:checked ~ .onglets-nav label[for="onglet-echeances"],
+#onglet-documents:checked ~ .onglets-nav label[for="onglet-documents"] {
+    color: var(--texte); border-bottom-color: var(--primaire);
+}
+#onglet-intervenants:checked ~ #panneau-intervenants,
+#onglet-echeances:checked ~ #panneau-echeances,
+#onglet-documents:checked ~ #panneau-documents { display: block; }
 
 .liste-documents { list-style: none; margin: 0; padding: 0; border: 1px solid var(--bordure); border-radius: var(--rayon); overflow: hidden; }
 .liste-documents li { display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.1rem; border-bottom: 1px solid var(--bordure); font-size: 0.9rem; gap: 1rem; }
@@ -741,14 +797,6 @@ h2.titre-section a { font-family: var(--police-corps); font-size: 0.82rem; font-
 .details-info[open] { padding-bottom: 0; }
 .details-info summary { font-weight: 400; font-size: 0.78rem; color: var(--texte-attenue); }
 .echeance-info { margin: 0.3rem 0 0; font-size: 0.78rem; line-height: 1.5; }
-
-.carte-suggestions { border-color: var(--avertissement); background: var(--avertissement-clair); }
-.carte-suggestions h3 { margin-top: 0; }
-.liste-suggestions { list-style: none; margin: 0; padding: 0; }
-.liste-suggestions li { padding: 0.5rem 0; border-bottom: 1px dashed var(--bordure); }
-.liste-suggestions li:last-child { border-bottom: none; }
-.liste-suggestions form { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-.suggestion-libelle { flex: 1; min-width: 160px; }
 
 .liste-activite li.echeance-retard { background: var(--danger-clair); }
 

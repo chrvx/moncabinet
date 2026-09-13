@@ -371,22 +371,6 @@ class Echeance:
 
 
 @dataclass
-class ModeleEcheance:
-    """Un modèle d'échéance suggéré pour une matière donnée (ex: "Conclusions
-    d'appelant" à 90 jours pour la matière Appel) — une suggestion à
-    accepter, corriger ou ignorer à l'ouverture d'un dossier de cette
-    matière, jamais une création automatique. Voir
-    app/repositories/echeances.py::lister_modeles_non_instancies."""
-
-    id: int
-    matiere_id: int
-    libelle: str
-    categorie_id: int
-    delai_jours: int
-    actif: bool
-
-
-@dataclass
 class ResultatRecherche:
     """Une ligne de résultat de recherche de contact, personne physique ou
     morale confondues — utilisé notamment pour la recherche anti-conflit
@@ -408,3 +392,4 @@ class LigneContact:
     prenom: str | None
     telephone: str | None
     email: str | None
+    est_avocat: bool

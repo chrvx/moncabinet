@@ -1,7 +1,7 @@
 from psycopg.rows import class_row
 
 from app import db
-from app.modeles import Avocat, CommissaireJustice, Notaire, ResultatRecherche
+from app.modeles import Avocat, Barreau, CommissaireJustice, Notaire, ResultatRecherche
 
 # Qualification professionnelle d'un contact personne physique déjà
 # existant (avocat, notaire, commissaire de justice) — voir
@@ -131,6 +131,26 @@ def lister_avocats_par_cabinet(cabinet_id: int) -> list[ResultatRecherche]:
                 JOIN personne_physique pp ON pp.contact_id = a.contact_id
                 WHERE a.cabinet_id = %s
                 ORDER BY libelle
+                """,
+                (cabinet_id,),
+            )
+            return cur.fetchall()
+
+
+def lister_barreaux_du_cabinet(cabinet_id: int) -> list[Barreau]:
+    """Barreaux d'exercice des avocats rattachés à ce cabinet (personne_morale),
+    pour le badge « barreau » affiché sur la fiche du cabinet — un cabinet peut
+    réunir des avocats de barreaux différents, d'où la liste plutôt qu'une
+    valeur unique."""
+    with db.pool.connection() as conn:
+        with conn.cursor(row_factory=class_row(Barreau)) as cur:
+            cur.execute(
+                """
+                SELECT DISTINCT b.id, b.libelle, b.actif
+                FROM avocat a
+                JOIN barreau b ON b.id = a.barreau_id
+                WHERE a.cabinet_id = %s
+                ORDER BY b.libelle
                 """,
                 (cabinet_id,),
             )
