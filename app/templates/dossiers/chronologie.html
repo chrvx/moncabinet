@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block titre %}Chronologie — {{ nom }}{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id) }}">&larr; Retour au dossier {{ nom }}</a></p>
+
+<h1>Chronologie — {{ nom }}</h1>
+
+{% if lignes %}
+<ul class="liste-echeances">
+{% for ligne in lignes %}
+    <li>
+        {% if ligne.type == "evenement" %}
+            {% set ev = ligne.objet %}
+            <div class="echeance-ligne">
+                <span class="categorie-badge">{{ type_evenement_libelles.get(ev.type_evenement_id, "—") }}</span>
+                <span class="date-echeance">{{ ev.date_evenement.strftime('%d/%m/%Y') }}{% if ev.duree_minutes %} — {{ ev.duree_minutes }} min{% endif %}</span>
+                <a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id) }}#panneau-evenements">Voir dans le dossier</a>
+            </div>
+            <p class="aide echeance-notes">{{ ev.contenu }}</p>
+        {% else %}
+            {% set document = ligne.objet %}
+            <div class="echeance-ligne">
+                <span class="categorie-badge">{{ libelles_origine_document[document.type_document] }}</span>
+                <span class="date-echeance">{{ document.date_tri.strftime('%d/%m/%Y %H:%M') }}</span>
+                {{ document.titre }}
+                <a href="{{ url_for('documents.telecharger', dossier_id=dossier.id, document_id=document.id) }}">Télécharger</a>
+            </div>
+        {% endif %}
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+    <p class="aide">Aucun événement ni document sur ce dossier.</p>
+{% endif %}
+{% endblock %}

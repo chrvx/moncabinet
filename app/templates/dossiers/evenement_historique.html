@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block titre %}Historique de l'événement{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id) }}#panneau-evenements">&larr; Retour au dossier {{ nom }}</a></p>
+
+<h1>Historique de l'événement</h1>
+
+{% if evenement %}
+<div class="carte">
+    <p><strong>État actuel</strong></p>
+    <p><span class="categorie-badge">{{ type_evenement_libelles.get(evenement.type_evenement_id, "—") }}</span>
+       {{ evenement.date_evenement.strftime('%d/%m/%Y') }}{% if evenement.duree_minutes %} — {{ evenement.duree_minutes }} min{% endif %}</p>
+    <p>{{ evenement.contenu }}</p>
+    {% if evenement.modifie_le %}
+    <p class="aide">Dernière modification par {{ utilisateur_noms.get(evenement.modifie_par, "—") }} le {{ evenement.modifie_le.strftime('%d/%m/%Y %H:%M') }}</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<h2>Versions précédentes</h2>
+{% if historique %}
+<ul class="liste-echeances">
+{% for h in historique %}
+    <li>
+        <p><span class="categorie-badge">{{ type_evenement_libelles.get(h.type_evenement_id, "—") }}</span>
+           {{ h.date_evenement.strftime('%d/%m/%Y') }}{% if h.duree_minutes %} — {{ h.duree_minutes }} min{% endif %}
+           {% if h.annule_le %} — <span class="statut-pastille clos">Annulé{% if h.motif_annulation %} — {{ h.motif_annulation }}{% endif %}</span>{% endif %}
+        </p>
+        <p>{{ h.contenu }}</p>
+        <p class="aide">Remplacée par la modification de {{ utilisateur_noms.get(h.modifie_par, "—") }} le {{ h.modifie_le.strftime('%d/%m/%Y %H:%M') }}</p>
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+    <p class="aide">Aucune modification enregistrée.</p>
+{% endif %}
+{% endblock %}

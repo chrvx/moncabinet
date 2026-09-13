@@ -2,7 +2,11 @@
 {% from "_macros.html" import libelle_selection %}
 {% block titre %}{{ dossier.reference or "Dossier en brouillon" }}{% endblock %}
 {% block contenu %}
-<p><a href="{{ url_for('dossiers.liste') }}">&larr; Retour aux dossiers</a></p>
+<p>
+    <a href="{{ url_for('dossiers.liste') }}">&larr; Retour aux dossiers</a>
+    &nbsp;·&nbsp;
+    <a href="{{ url_for('dossiers.chronologie', dossier_id=dossier.id) }}">Chronologie</a>
+</p>
 
 <div class="entete-dossier">
     <div>
@@ -134,10 +138,12 @@
 <div class="onglets-dossier">
     <input type="radio" name="onglet-dossier" id="onglet-intervenants" class="onglet-radio" checked>
     <input type="radio" name="onglet-dossier" id="onglet-echeances" class="onglet-radio">
+    <input type="radio" name="onglet-dossier" id="onglet-evenements" class="onglet-radio">
     <input type="radio" name="onglet-dossier" id="onglet-documents" class="onglet-radio">
     <div class="onglets-nav">
         <label for="onglet-intervenants">Intervenants</label>
         <label for="onglet-echeances">Échéances</label>
+        <label for="onglet-evenements">Événements</label>
         <label for="onglet-documents">Documents</label>
     </div>
 
@@ -195,6 +201,7 @@
                     <form method="post" action="{{ url_for('dossiers.marquer_echeance_fait', dossier_id=dossier.id, echeance_id=e.id) }}" style="display:inline">
                         <button type="submit">Fait</button>
                     </form>
+                    <a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id, evenement_echeance_id=e.id) }}#ajouter-evenement">Clôturer avec compte-rendu</a>
                 {% endif %}
                 {% if dossier.statut != "clos" %}
                 {% set formulaire_modif_echeance = formulaires_echeances[e.id] %}
@@ -245,6 +252,99 @@
     <p>{{ formulaire_echeance.heure_echeance.label }} {{ formulaire_echeance.heure_echeance() }}</p>
     <p>{{ formulaire_echeance.notes.label }} {{ formulaire_echeance.notes() }}</p>
     {{ formulaire_echeance.soumettre() }}
+</form>
+</details>
+{% endif %}
+
+    </div>
+
+    <div class="onglet-panneau" id="panneau-evenements">
+
+{% if evenements %}
+<ul class="liste-evenements">
+{% for ev in evenements %}
+    <li{% if ev.annule_le %} class="evenement-annule"{% endif %}>
+        <div class="evenement-ligne">
+            <span class="categorie-badge">{{ type_evenement_libelles.get(ev.type_evenement_id, "—") }}</span>
+            <span class="date-echeance">{{ ev.date_evenement.strftime('%d/%m/%Y') }}{% if ev.duree_minutes %} — {{ ev.duree_minutes }} min{% endif %}</span>
+            {% if ev.annule_le %}<span class="statut-pastille clos">Annulé{% if ev.motif_annulation %} — {{ ev.motif_annulation }}{% endif %}</span>{% endif %}
+            <span class="echeance-actions">
+                {% if dossier.statut != "clos" %}
+                {% set formulaire_modif_evenement = formulaires_evenements[ev.id] %}
+                <details class="details-bouton">
+                <summary>Modifier</summary>
+                <form method="post" action="{{ url_for('dossiers.modifier_evenement', dossier_id=dossier.id, evenement_id=ev.id) }}">
+                    {{ formulaire_modif_evenement.hidden_tag() }}
+                    <p>{{ formulaire_modif_evenement.type_evenement_id.label }} {{ formulaire_modif_evenement.type_evenement_id() }}</p>
+                    <p>{{ formulaire_modif_evenement.date_evenement.label }} {{ formulaire_modif_evenement.date_evenement() }}</p>
+                    <p>{{ formulaire_modif_evenement.duree_minutes.label }} {{ formulaire_modif_evenement.duree_minutes() }}</p>
+                    <p>{{ formulaire_modif_evenement.contenu.label }} {{ formulaire_modif_evenement.contenu() }}</p>
+                    {{ formulaire_modif_evenement.soumettre() }}
+                </form>
+                </details>
+                {% if current_user.role in ("avocat", "collaborateur") %}
+                {% set formulaire_deplacement = formulaires_deplacement_evenement[ev.id] %}
+                <details class="details-bouton">
+                <summary>Déplacer</summary>
+                <form method="post" action="{{ url_for('dossiers.deplacer_evenement', dossier_id=dossier.id, evenement_id=ev.id) }}">
+                    {{ formulaire_deplacement.hidden_tag() }}
+                    <p>{{ formulaire_deplacement.nouveau_dossier_id.label }} {{ formulaire_deplacement.nouveau_dossier_id() }}</p>
+                    {{ formulaire_deplacement.soumettre() }}
+                </form>
+                </details>
+                {% endif %}
+                {% if ev.annule_le %}
+                    <form method="post" action="{{ url_for('dossiers.reactiver_evenement', dossier_id=dossier.id, evenement_id=ev.id) }}" style="display:inline">
+                        <button type="submit">Réactiver</button>
+                    </form>
+                {% else %}
+                {% set formulaire_annulation = formulaires_annulation_evenement[ev.id] %}
+                <details class="details-bouton">
+                <summary>Annuler</summary>
+                <form method="post" action="{{ url_for('dossiers.annuler_evenement', dossier_id=dossier.id, evenement_id=ev.id) }}">
+                    {{ formulaire_annulation.hidden_tag() }}
+                    <p>{{ formulaire_annulation.motif_annulation.label }} {{ formulaire_annulation.motif_annulation() }}</p>
+                    {{ formulaire_annulation.soumettre() }}
+                </form>
+                </details>
+                {% endif %}
+                {% endif %}
+            </span>
+        </div>
+        <p class="aide echeance-notes">{{ ev.contenu }}</p>
+        <details class="details-info">
+        <summary>Détails</summary>
+        <p class="aide echeance-info">
+            Créé par {{ utilisateur_noms.get(ev.cree_par, "—") }} le {{ ev.cree_le.strftime('%d/%m/%Y %H:%M') }}
+            {% if ev.modifie_le %}<br>Dernière modification par {{ utilisateur_noms.get(ev.modifie_par, "—") }} le {{ ev.modifie_le.strftime('%d/%m/%Y %H:%M') }}{% endif %}
+            <br><a href="{{ url_for('dossiers.historique_evenement', dossier_id=dossier.id, evenement_id=ev.id) }}">Historique</a>
+        </p>
+        </details>
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+    <p class="aide">Aucun événement enregistré.</p>
+{% endif %}
+
+<p>
+{% if afficher_evenements_annules %}
+    <a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id) }}#panneau-evenements">Masquer les événements annulés</a>
+{% else %}
+    <a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id, afficher_evenements_annules=1) }}#panneau-evenements">Afficher aussi les événements annulés</a>
+{% endif %}
+</p>
+
+{% if dossier.statut != "clos" %}
+<details id="ajouter-evenement" {{ "open" if formulaire_evenement.echeance_id.data }}>
+<summary>Ajouter un événement</summary>
+<form method="post" action="{{ url_for('dossiers.ajouter_evenement', dossier_id=dossier.id) }}">
+    {{ formulaire_evenement.hidden_tag() }}
+    <p>{{ formulaire_evenement.type_evenement_id.label }} {{ formulaire_evenement.type_evenement_id() }}</p>
+    <p>{{ formulaire_evenement.date_evenement.label }} {{ formulaire_evenement.date_evenement() }}</p>
+    <p>{{ formulaire_evenement.duree_minutes.label }} {{ formulaire_evenement.duree_minutes() }}</p>
+    <p>{{ formulaire_evenement.contenu.label }} {{ formulaire_evenement.contenu() }}</p>
+    {{ formulaire_evenement.soumettre() }}
 </form>
 </details>
 {% endif %}

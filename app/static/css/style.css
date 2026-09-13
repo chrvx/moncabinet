@@ -800,6 +800,15 @@ h2.titre-section a { font-family: var(--police-corps); font-size: 0.82rem; font-
 
 .liste-activite li.echeance-retard { background: var(--danger-clair); }
 
+/* ---------- Événements ---------- */
+
+.liste-evenements { list-style: none; margin: 0 0 1rem; padding: 0; border: 1px solid var(--bordure); border-radius: var(--rayon); overflow: hidden; }
+.liste-evenements > li { padding: 0.8rem 1.1rem; border-bottom: 1px solid var(--bordure); font-size: 0.9rem; }
+.liste-evenements > li:last-child { border-bottom: none; }
+.liste-evenements > li.evenement-annule { opacity: 0.6; }
+.evenement-ligne { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.liste-evenements details { margin-top: 0.6rem; }
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 900px) {

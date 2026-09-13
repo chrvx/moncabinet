@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, time
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -7,7 +7,10 @@ from psycopg.errors import UniqueViolation
 from app.blueprints.dossiers.forms import (
     AjouterIntervenantForm,
     AjouterRoleForm,
+    AnnulerEvenementForm,
+    DeplacerEvenementForm,
     EcheanceForm,
+    EvenementForm,
     ModifierDossierForm,
     NouveauDossierForm,
     OuvrirDossierForm,
@@ -15,8 +18,10 @@ from app.blueprints.dossiers.forms import (
 from app.repositories import categories_echeance, categories_matiere
 from app.repositories import documents as documents_repo
 from app.repositories import echeances as echeances_repo
-from app.repositories import dossiers, matieres, reference, utilisateurs
+from app.repositories import evenements as evenements_repo
+from app.repositories import dossiers, matieres, reference, types_evenement, utilisateurs
 from app.repositories.roles import RegleRoleViolee, attribuer_role, retirer_role
+from app.securite import role_requis
 from app.services import modeles_documents
 
 bp = Blueprint("dossiers", __name__, url_prefix="/dossiers")
@@ -193,6 +198,17 @@ def _choix_contacts_lies(intervenants):
     return choix
 
 
+def _choix_dossiers_deplacement(dossier_id_actuel):
+    """Choix de nouveau_dossier_id pour DeplacerEvenementForm : les
+    dossiers ouverts autres que le dossier d'origine, référence et nom
+    calculé à l'appui pour les distinguer."""
+    return [
+        (str(d.id), f"{d.reference} — {dossiers.nom_calcule(d.id)}")
+        for d in dossiers.lister_ouverts()
+        if d.id != dossier_id_actuel
+    ]
+
+
 def _preparer_formulaire_role(intervenants):
     """Formulaire minimal pour ajouter un rôle de plus à un contact déjà
     intervenant sur ce dossier : pas de recherche de contact (il est déjà
@@ -333,6 +349,38 @@ def fiche(dossier_id):
         formulaire_modif_echeance.categorie_id.choices = categorie_choix
         formulaires_echeances[e.id] = formulaire_modif_echeance
 
+    type_evenement_choix = [(t.id, t.libelle) for t in types_evenement.lister()]
+    afficher_evenements_annules = request.args.get("afficher_evenements_annules") == "1"
+    evenements = evenements_repo.lister_pour_dossier(
+        dossier_id, inclure_annules=afficher_evenements_annules
+    )
+    # Préremplissage depuis le lien "Clôturer avec compte-rendu" d'une
+    # échéance — voir echeance_id ci-dessous et le bouton correspondant sur
+    # panneau-echeances.
+    evenement_echeance_id = request.args.get("evenement_echeance_id")
+    formulaire_evenement = EvenementForm(
+        echeance_id=evenement_echeance_id,
+        date_evenement=date.today() if evenement_echeance_id else None,
+    )
+    formulaire_evenement.type_evenement_id.choices = type_evenement_choix
+    formulaires_evenements = {}
+    formulaires_annulation_evenement = {}
+    formulaires_deplacement_evenement = {}
+    dossiers_choix_deplacement = _choix_dossiers_deplacement(dossier_id)
+    for ev in evenements:
+        formulaire_modif_evenement = EvenementForm(
+            type_evenement_id=ev.type_evenement_id,
+            date_evenement=ev.date_evenement,
+            duree_minutes=ev.duree_minutes,
+            contenu=ev.contenu,
+        )
+        formulaire_modif_evenement.type_evenement_id.choices = type_evenement_choix
+        formulaires_evenements[ev.id] = formulaire_modif_evenement
+        formulaires_annulation_evenement[ev.id] = AnnulerEvenementForm()
+        formulaire_deplacement = DeplacerEvenementForm()
+        formulaire_deplacement.nouveau_dossier_id.choices = dossiers_choix_deplacement
+        formulaires_deplacement_evenement[ev.id] = formulaire_deplacement
+
     return render_template(
         "dossiers/fiche.html",
         dossier=dossier,
@@ -352,6 +400,13 @@ def fiche(dossier_id):
         utilisateur_noms={u.id: u.nom for u in utilisateurs.lister()},
         aujourd_hui=date.today(),
         matieres_groupees=_matieres_groupees(),
+        evenements=evenements,
+        formulaire_evenement=formulaire_evenement,
+        formulaires_evenements=formulaires_evenements,
+        formulaires_annulation_evenement=formulaires_annulation_evenement,
+        formulaires_deplacement_evenement=formulaires_deplacement_evenement,
+        afficher_evenements_annules=afficher_evenements_annules,
+        type_evenement_libelles={t.id: t.libelle for t in types_evenement.lister(actives_seulement=False)},
     )
 
 
@@ -562,3 +617,164 @@ def supprimer_echeance(dossier_id, echeance_id):
     echeances_repo.supprimer(echeance_id)
     flash("Échéance supprimée.", "succes")
     return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+# --- Événements ---------------------------------------------------------------
+
+
+@bp.route("/<int:dossier_id>/evenements", methods=["POST"])
+@login_required
+def ajouter_evenement(dossier_id):
+    blocage = _bloquer_si_clos(dossier_id)
+    if blocage:
+        return blocage
+    formulaire = EvenementForm()
+    formulaire.type_evenement_id.choices = [(t.id, t.libelle) for t in types_evenement.lister()]
+    if formulaire.validate_on_submit():
+        echeance_id = int(formulaire.echeance_id.data) if formulaire.echeance_id.data else None
+        evenements_repo.creer(
+            dossier_id=dossier_id,
+            type_evenement_id=int(formulaire.type_evenement_id.data),
+            date_evenement=formulaire.date_evenement.data,
+            duree_minutes=formulaire.duree_minutes.data,
+            contenu=formulaire.contenu.data,
+            utilisateur_id=current_user.id,
+            echeance_id=echeance_id,
+        )
+        # Raccourci "Clôturer avec compte-rendu" : la création de
+        # l'événement vaut clôture de l'échéance qui l'a fait naître.
+        if echeance_id is not None:
+            echeances_repo.marquer_fait(echeance_id, current_user.id)
+        flash("Événement ajouté.", "succes")
+    else:
+        flash("Le formulaire contient des erreurs.", "erreur")
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+@bp.route("/<int:dossier_id>/evenements/<int:evenement_id>/modifier", methods=["POST"])
+@login_required
+def modifier_evenement(dossier_id, evenement_id):
+    blocage = _bloquer_si_clos(dossier_id)
+    if blocage:
+        return blocage
+    formulaire = EvenementForm()
+    formulaire.type_evenement_id.choices = [(t.id, t.libelle) for t in types_evenement.lister()]
+    if formulaire.validate_on_submit():
+        evenements_repo.modifier(
+            evenement_id=evenement_id,
+            type_evenement_id=int(formulaire.type_evenement_id.data),
+            date_evenement=formulaire.date_evenement.data,
+            duree_minutes=formulaire.duree_minutes.data,
+            contenu=formulaire.contenu.data,
+            utilisateur_id=current_user.id,
+        )
+        flash("Événement mis à jour.", "succes")
+    else:
+        flash("Le formulaire contient des erreurs.", "erreur")
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+@bp.route("/<int:dossier_id>/evenements/<int:evenement_id>/deplacer", methods=["POST"])
+@login_required
+@role_requis("avocat", "collaborateur")
+def deplacer_evenement(dossier_id, evenement_id):
+    """Changement de dossier de rattachement, réservé avocat/collaborateur
+    (voir DeplacerEvenementForm) : une portée différente d'une simple
+    correction de contenu."""
+    blocage = _bloquer_si_clos(dossier_id)
+    if blocage:
+        return blocage
+    formulaire = DeplacerEvenementForm()
+    formulaire.nouveau_dossier_id.choices = _choix_dossiers_deplacement(dossier_id)
+    if formulaire.validate_on_submit():
+        evenements_repo.changer_dossier(
+            evenement_id=evenement_id,
+            nouveau_dossier_id=int(formulaire.nouveau_dossier_id.data),
+            utilisateur_id=current_user.id,
+        )
+        flash("Événement déplacé vers l'autre dossier.", "succes")
+        return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+    flash("Choisissez un dossier de destination valide.", "erreur")
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+@bp.route("/<int:dossier_id>/evenements/<int:evenement_id>/annuler", methods=["POST"])
+@login_required
+def annuler_evenement(dossier_id, evenement_id):
+    blocage = _bloquer_si_clos(dossier_id)
+    if blocage:
+        return blocage
+    formulaire = AnnulerEvenementForm()
+    if formulaire.validate_on_submit():
+        evenements_repo.annuler(
+            evenement_id, current_user.id, motif=formulaire.motif_annulation.data or None
+        )
+        flash("Événement annulé.", "succes")
+    else:
+        flash("Le formulaire contient des erreurs.", "erreur")
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+@bp.route("/<int:dossier_id>/evenements/<int:evenement_id>/reactiver", methods=["POST"])
+@login_required
+def reactiver_evenement(dossier_id, evenement_id):
+    blocage = _bloquer_si_clos(dossier_id)
+    if blocage:
+        return blocage
+    evenements_repo.reactiver(evenement_id, current_user.id)
+    flash("Événement réactivé.", "succes")
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+
+
+@bp.route("/<int:dossier_id>/evenements/<int:evenement_id>/historique")
+@login_required
+def historique_evenement(dossier_id, evenement_id):
+    dossier = dossiers.recuperer(dossier_id)
+    if dossier is None:
+        flash("Ce dossier n'existe pas.", "erreur")
+        return redirect(url_for("dossiers.liste"))
+    evenement = evenements_repo.recuperer(evenement_id)
+    return render_template(
+        "dossiers/evenement_historique.html",
+        dossier=dossier,
+        nom=dossiers.nom_calcule(dossier_id),
+        evenement=evenement,
+        historique=evenements_repo.lister_historique(evenement_id),
+        type_evenement_libelles={t.id: t.libelle for t in types_evenement.lister(actives_seulement=False)},
+        utilisateur_noms={u.id: u.nom for u in utilisateurs.lister()},
+    )
+
+
+# --- Chronologie --------------------------------------------------------------
+
+
+@bp.route("/<int:dossier_id>/chronologie")
+@login_required
+def chronologie(dossier_id):
+    """Fusionne en mémoire les événements (date = date_evenement, annulés
+    exclus) et les documents (date = date_tri) d'un dossier, triés
+    ensemble par date décroissante — pas de nouvelle table, pur Python."""
+    dossier = dossiers.recuperer(dossier_id)
+    if dossier is None:
+        flash("Ce dossier n'existe pas.", "erreur")
+        return redirect(url_for("dossiers.liste"))
+
+    lignes = []
+    for ev in evenements_repo.lister_pour_dossier(dossier_id):
+        lignes.append({
+            "type": "evenement",
+            "date": datetime.combine(ev.date_evenement, time.min),
+            "objet": ev,
+        })
+    for document in documents_repo.lister_pour_dossier(dossier_id):
+        lignes.append({"type": "document", "date": document.date_tri, "objet": document})
+    lignes.sort(key=lambda l: l["date"], reverse=True)
+
+    return render_template(
+        "dossiers/chronologie.html",
+        dossier=dossier,
+        nom=dossiers.nom_calcule(dossier_id),
+        lignes=lignes,
+        type_evenement_libelles={t.id: t.libelle for t in types_evenement.lister(actives_seulement=False)},
+        libelles_origine_document={"genere": "Généré", "email": "E-mail", "depose": "Déposé"},
+    )
