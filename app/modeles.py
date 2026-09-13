@@ -371,6 +371,65 @@ class Echeance:
 
 
 @dataclass
+class TypeEvenement:
+    """Un type d'événement (Rendez-vous, Entretien téléphonique,
+    Audience...) — table de référence éditable depuis parametres/, comme
+    CategorieEcheance."""
+
+    id: int
+    libelle: str
+    actif: bool
+
+
+@dataclass
+class Evenement:
+    """Ce qui s'est passé sur un dossier (rdv, appel, audience...), par
+    opposition à Echeance qui porte sur ce qui est prévu. contenu est
+    toujours renseigné. Pas de suppression : annule_le/annule_par/
+    motif_annulation portent une annulation réversible. modifie_par/
+    modifie_le ne reflètent que la dernière écriture — voir
+    EvenementHistorique (app/repositories/evenements.py) pour l'historique
+    complet."""
+
+    id: int
+    dossier_id: int
+    type_evenement_id: int
+    date_evenement: date
+    duree_minutes: int | None
+    contenu: str
+    echeance_id: int | None
+    document_id: int | None
+    annule_le: datetime | None
+    annule_par: int | None
+    motif_annulation: str | None
+    cree_par: int | None
+    cree_le: datetime
+    modifie_par: int | None
+    modifie_le: datetime | None
+
+
+@dataclass
+class EvenementHistorique:
+    """Une copie de la ligne evenement telle qu'elle était juste avant une
+    écriture qui l'a modifiée (contenu, type, date, durée, dossier de
+    rattachement, annulation, réactivation) — voir
+    app/repositories/evenements.py::_historiser."""
+
+    id: int
+    evenement_id: int
+    dossier_id: int
+    type_evenement_id: int
+    date_evenement: date
+    duree_minutes: int | None
+    contenu: str
+    annule_le: datetime | None
+    annule_par: int | None
+    motif_annulation: str | None
+    modifie_par: int | None
+    modifie_le: datetime
+
+
+@dataclass
 class ResultatRecherche:
     """Une ligne de résultat de recherche de contact, personne physique ou
     morale confondues — utilisé notamment pour la recherche anti-conflit
