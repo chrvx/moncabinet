@@ -329,9 +329,9 @@
 
 <p>
 {% if afficher_evenements_annules %}
-    <a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id) }}#panneau-evenements">Masquer les événements annulés</a>
+    <a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id, onglet='evenements') }}#panneau-evenements">Masquer les événements annulés</a>
 {% else %}
-    <a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id, afficher_evenements_annules=1) }}#panneau-evenements">Afficher aussi les événements annulés</a>
+    <a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id, afficher_evenements_annules=1, onglet='evenements') }}#panneau-evenements">Afficher aussi les événements annulés</a>
 {% endif %}
 </p>
 

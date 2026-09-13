@@ -207,7 +207,7 @@ def _onglet_actif():
     document, "Clôturer avec compte-rendu", filtre des événements annulés)
     passent donc un paramètre de requête qu'on retraduit ici en onglet à
     afficher par défaut, plutôt que de toujours retomber sur Intervenants."""
-    if request.args.get("evenement_echeance_id") or request.args.get("afficher_evenements_annules"):
+    if request.args.get("onglet") == "evenements" or request.args.get("evenement_echeance_id"):
         return "evenements"
     if request.args.get("echeance_libelle") or request.args.get("echeance_document_id"):
         return "echeances"
@@ -665,7 +665,7 @@ def ajouter_evenement(dossier_id):
         flash("Événement ajouté.", "succes")
     else:
         flash("Le formulaire contient des erreurs.", "erreur")
-    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id, onglet="evenements"))
 
 
 @bp.route("/<int:dossier_id>/evenements/<int:evenement_id>/modifier", methods=["POST"])
@@ -688,7 +688,7 @@ def modifier_evenement(dossier_id, evenement_id):
         flash("Événement mis à jour.", "succes")
     else:
         flash("Le formulaire contient des erreurs.", "erreur")
-    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id, onglet="evenements"))
 
 
 @bp.route("/<int:dossier_id>/evenements/<int:evenement_id>/deplacer", methods=["POST"])
@@ -710,9 +710,9 @@ def deplacer_evenement(dossier_id, evenement_id):
             utilisateur_id=current_user.id,
         )
         flash("Événement déplacé vers l'autre dossier.", "succes")
-        return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+        return redirect(url_for("dossiers.fiche", dossier_id=dossier_id, onglet="evenements"))
     flash("Choisissez un dossier de destination valide.", "erreur")
-    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id, onglet="evenements"))
 
 
 @bp.route("/<int:dossier_id>/evenements/<int:evenement_id>/annuler", methods=["POST"])
@@ -729,7 +729,7 @@ def annuler_evenement(dossier_id, evenement_id):
         flash("Événement annulé.", "succes")
     else:
         flash("Le formulaire contient des erreurs.", "erreur")
-    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id, onglet="evenements"))
 
 
 @bp.route("/<int:dossier_id>/evenements/<int:evenement_id>/reactiver", methods=["POST"])
@@ -740,7 +740,7 @@ def reactiver_evenement(dossier_id, evenement_id):
         return blocage
     evenements_repo.reactiver(evenement_id, current_user.id)
     flash("Événement réactivé.", "succes")
-    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+    return redirect(url_for("dossiers.fiche", dossier_id=dossier_id, onglet="evenements"))
 
 
 @bp.route("/<int:dossier_id>/evenements/<int:evenement_id>/historique")
