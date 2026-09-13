@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titre %}Types d'événement{% endblock %}
+{% block contenu %}
+<h1>Types d'événement</h1>
+<p>Réservé aux comptes avocat et collaborateur.</p>
+
+<ul>
+{% for t in types %}
+    <li{% if not t.actif %} style="opacity:0.6"{% endif %}>
+        {{ t.libelle }}{% if not t.actif %} (inactif){% endif %}
+        <form method="post" action="{{ url_for('parametres.basculer_type_evenement', type_id=t.id) }}" style="display:inline">
+            <button type="submit">{{ "Réactiver" if not t.actif else "Désactiver" }}</button>
+        </form>
+    </li>
+{% endfor %}
+</ul>
+
+<h2>Nouveau type</h2>
+<form method="post" action="{{ url_for('parametres.creer_type_evenement') }}">
+    {{ formulaire.hidden_tag() }}
+    {{ formulaire.libelle(size=32) }}
+    {{ formulaire.soumettre() }}
+</form>
+{% endblock %}

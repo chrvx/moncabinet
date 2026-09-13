@@ -58,6 +58,11 @@
                 <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
                 Catégories d'échéance
             </a>
+            <a href="{{ url_for('parametres.liste_types_evenement') }}"
+               class="{{ 'actif' if request.endpoint == 'parametres.liste_types_evenement' else '' }}">
+                <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+                Types d'événement
+            </a>
             {% endif %}
         </nav>
     </aside>

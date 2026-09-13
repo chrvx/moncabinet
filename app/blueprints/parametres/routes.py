@@ -5,11 +5,12 @@ from psycopg.errors import UniqueViolation
 from app.blueprints.parametres.forms import (
     ChangerCategorieMatiereForm,
     NouveauBarreauForm,
+    NouveauTypeEvenementForm,
     NouvelleCategorieEcheanceForm,
     NouvelleCategorieMatiereForm,
     NouvelleMatiereForm,
 )
-from app.repositories import categories_echeance, categories_matiere
+from app.repositories import categories_echeance, categories_matiere, types_evenement
 from app.repositories import matieres, reference
 from app.securite import role_requis
 
@@ -189,3 +190,39 @@ def creer_categorie_echeance():
 def basculer_categorie_echeance(categorie_id):
     categories_echeance.basculer_actif(categorie_id)
     return redirect(url_for("parametres.liste_categories_echeance"))
+
+
+# --- Types d'événement (réservé avocat / collaborateur) ---------------------
+
+
+@bp.route("/types-evenement")
+@login_required
+@role_requis("avocat", "collaborateur")
+def liste_types_evenement():
+    return render_template(
+        "parametres/types_evenement.html",
+        types=types_evenement.lister(actives_seulement=False),
+        formulaire=NouveauTypeEvenementForm(),
+    )
+
+
+@bp.route("/types-evenement", methods=["POST"])
+@login_required
+@role_requis("avocat", "collaborateur")
+def creer_type_evenement():
+    formulaire = NouveauTypeEvenementForm()
+    if formulaire.validate_on_submit():
+        try:
+            types_evenement.creer(formulaire.libelle.data)
+            flash("Type ajouté.", "succes")
+        except UniqueViolation:
+            flash("Ce type existe déjà.", "erreur")
+    return redirect(url_for("parametres.liste_types_evenement"))
+
+
+@bp.route("/types-evenement/<int:type_id>/basculer", methods=["POST"])
+@login_required
+@role_requis("avocat", "collaborateur")
+def basculer_type_evenement(type_id):
+    types_evenement.basculer_actif(type_id)
+    return redirect(url_for("parametres.liste_types_evenement"))

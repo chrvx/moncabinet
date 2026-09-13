@@ -38,3 +38,10 @@ class NouvelleCategorieMatiereForm(FlaskForm):
         "Nouvelle catégorie", validators=[DataRequired(message="Ce champ est requis.")]
     )
     soumettre = SubmitField("Ajouter")
+
+
+class NouveauTypeEvenementForm(FlaskForm):
+    libelle = StringField(
+        "Nouveau type", validators=[DataRequired(message="Ce champ est requis.")]
+    )
+    soumettre = SubmitField("Ajouter")
