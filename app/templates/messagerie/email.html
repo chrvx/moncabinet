@@ -25,9 +25,12 @@
 {% for piece in pieces_jointes %}
     <li>
         <span>{{ piece.nom }} <span class="date-doc">— {{ (piece.taille / 1024) | round(1) }} Ko</span></span>
-        <form method="post" action="{{ url_for('messagerie.verser_piece_jointe', document_id=document.id, index=piece.index) }}" style="display:inline">
-            <button type="submit">Verser au dossier</button>
-        </form>
+        <span class="liens-doc">
+            <form method="post" action="{{ url_for('messagerie.verser_piece_jointe', document_id=document.id, index=piece.index) }}" style="display:inline">
+                <button type="submit">Verser au dossier</button>
+            </form>
+            <a href="{{ url_for('documents.deposer', dossier_id=dossier.id, document_origine_id=document.id) }}">Verser une version retravaillée</a>
+        </span>
     </li>
 {% endfor %}
 </ul>

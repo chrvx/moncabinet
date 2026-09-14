@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titre %}Pièces — {{ nom }}{% endblock %}
+{% block contenu %}
+<p><a href="{{ url_for('dossiers.fiche', dossier_id=dossier.id) }}">&larr; Retour au dossier {{ nom }}</a></p>
+
+<h1>Pièces — {{ nom }}</h1>
+
+{% if pieces %}
+<ul class="liste-documents">
+{% for piece in pieces %}
+    <li>
+        <span>
+            <span class="categorie-badge">{{ libelles_origine_document[piece.type_document] }}</span>
+            {% if piece.numero_piece %}<strong>n° {{ piece.numero_piece }}</strong>{% endif %}
+            {{ piece.titre }}
+            {% if piece.utilisee %}<span class="categorie-badge">Utilisée</span>{% endif %}
+            <span class="date-doc">
+                — provenance : {{ piece.nom_contact_provenance }}
+                {% if piece.date_transmission %}, transmise le {{ piece.date_transmission.strftime('%d/%m/%Y') }}{% endif %}
+            </span>
+            {% if piece.notes %}<p class="aide">{{ piece.notes }}</p>{% endif %}
+        </span>
+        <span class="liens-doc">
+            {% if piece.type_document == "email" %}
+                <a href="{{ url_for('messagerie.consulter_email', document_id=piece.id) }}">Lire</a>
+            {% else %}
+                <a href="{{ url_for('documents.telecharger', dossier_id=dossier.id, document_id=piece.id) }}">Télécharger</a>
+            {% endif %}
+        </span>
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+    <p class="aide">Aucune pièce marquée sur ce dossier.</p>
+{% endif %}
+{% endblock %}

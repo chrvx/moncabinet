@@ -3,6 +3,7 @@ from flask_wtf.file import FileField, FileRequired
 from wtforms import (
     BooleanField,
     DateField,
+    HiddenField,
     IntegerField,
     SelectField,
     StringField,
@@ -47,9 +48,13 @@ class DeposerDocumentForm(FlaskForm):
 
     fichier = FileField("Fichier", validators=[FileRequired(message="Choisissez un fichier.")])
     titre = StringField("Titre", validators=[DataRequired(message="Ce champ est requis.")])
+    notes = TextAreaField("Notes", validators=[Optional()])
     est_piece = BooleanField("C'est une pièce")
     contact_provenance_id = SelectField("Provenance", validators=[Optional()])
     date_transmission = DateField("Date de transmission", validators=[Optional()])
+    # Préréempli et transmis en champ caché depuis "Verser une version
+    # retravaillée" sur la fiche d'un e-mail (§7.4) — jamais saisi à la main.
+    document_origine_id = HiddenField()
     soumettre = SubmitField("Déposer")
 
 
@@ -60,3 +65,11 @@ class MarquerPieceForm(FlaskForm):
     contact_provenance_id = SelectField("Provenance", validators=[DataRequired()])
     date_transmission = DateField("Date de transmission", validators=[Optional()])
     soumettre = SubmitField("Marquer comme pièce")
+
+
+class ModifierDocumentForm(FlaskForm):
+    """Écran de modification d'un document (migration 0026) : seule la note
+    libre est éditable après coup, quel que soit le type_document."""
+
+    notes = TextAreaField("Notes", validators=[Optional()])
+    soumettre = SubmitField("Enregistrer")

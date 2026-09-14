@@ -211,6 +211,10 @@ def _onglet_actif():
         return "evenements"
     if request.args.get("echeance_libelle") or request.args.get("echeance_document_id"):
         return "echeances"
+    if request.args.get("onglet") == "messagerie":
+        return "messagerie"
+    if request.args.get("onglet") == "documents":
+        return "documents"
     return "intervenants"
 
 
@@ -407,7 +411,8 @@ def fiche(dossier_id):
         formulaire_modif=formulaire_modif,
         formulaire_intervenant=formulaire_intervenant,
         formulaire_role=formulaire_role,
-        documents=documents_repo.lister_pour_dossier(dossier_id),
+        documents=documents_repo.lister_documents_pour_dossier(dossier_id),
+        emails=documents_repo.lister_emails_pour_dossier(dossier_id),
         modeles_documents=modeles_documents.lister(),
         echeances=echeances,
         formulaire_echeance=formulaire_echeance,
@@ -793,5 +798,30 @@ def chronologie(dossier_id):
         nom=dossiers.nom_calcule(dossier_id),
         lignes=lignes,
         type_evenement_libelles={t.id: t.libelle for t in types_evenement.lister(actives_seulement=False)},
+        libelles_origine_document={"genere": "Généré", "email": "E-mail", "depose": "Déposé"},
+    )
+
+
+# --- Pièces ---------------------------------------------------------------
+
+
+@bp.route("/<int:dossier_id>/pieces")
+@login_required
+def pieces(dossier_id):
+    """Page séparée, pas un onglet de plus (docs/phase-documents-correspondance.md
+    §7.2) : préparer une communication de pièces est une tâche ponctuelle et
+    concentrée, sur le modèle de dossiers.chronologie. Tous types de document
+    confondus, un e-mail produit comme pièce y figure au même titre qu'un
+    document déposé."""
+    dossier = dossiers.recuperer(dossier_id)
+    if dossier is None:
+        flash("Ce dossier n'existe pas.", "erreur")
+        return redirect(url_for("dossiers.liste"))
+
+    return render_template(
+        "dossiers/pieces.html",
+        dossier=dossier,
+        nom=dossiers.nom_calcule(dossier_id),
+        pieces=documents_repo.lister_pieces_pour_dossier(dossier_id),
         libelles_origine_document={"genere": "Généré", "email": "E-mail", "depose": "Déposé"},
     )

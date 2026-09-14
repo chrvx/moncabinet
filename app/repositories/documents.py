@@ -3,11 +3,18 @@ from datetime import date, datetime
 from psycopg.rows import class_row
 
 from app import db
-from app.modeles import Document, DocumentEmail, DocumentGenere, DocumentListe, DocumentPiece
+from app.modeles import Document, DocumentEmail, DocumentGenere, DocumentListe, DocumentPiece, PieceListe
 
 _COLONNES_DOCUMENT = """
     id, dossier_id, type_document, titre, chemin_fichier,
-    document_origine_id, cree_par, cree_le
+    document_origine_id, cree_par, cree_le, notes
+"""
+
+_CTE_NOM_CONTACT = """
+    COALESCE(
+        NULLIF(trim(COALESCE(pp.prenom || ' ', '') || pp.nom), ''),
+        pm.raison_sociale
+    )
 """
 
 
@@ -47,17 +54,18 @@ def creer_depose(
     chemin_fichier: str,
     utilisateur_id: int,
     document_origine_id: int | None = None,
+    notes: str | None = None,
 ) -> Document:
     with db.pool.connection() as conn:
         with conn.cursor(row_factory=class_row(Document)) as cur:
             cur.execute(
                 f"""
                 INSERT INTO document
-                    (dossier_id, type_document, titre, chemin_fichier, document_origine_id, cree_par)
-                VALUES (%s, 'depose', %s, %s, %s, %s)
+                    (dossier_id, type_document, titre, chemin_fichier, document_origine_id, cree_par, notes)
+                VALUES (%s, 'depose', %s, %s, %s, %s, %s)
                 RETURNING {_COLONNES_DOCUMENT}
                 """,
-                (dossier_id, titre, chemin_fichier, document_origine_id, utilisateur_id),
+                (dossier_id, titre, chemin_fichier, document_origine_id, utilisateur_id, notes),
             )
             conn.commit()
             return cur.fetchone()
@@ -135,6 +143,20 @@ def recuperer(document_id: int) -> Document | None:
             return cur.fetchone()
 
 
+def modifier_notes(document_id: int, notes: str | None) -> Document:
+    """Écran de modification d'un document (migration 0026) : seule la note
+    libre est éditable après coup, quel que soit le type_document — voir
+    docs/phase-documents-correspondance.md §3."""
+    with db.pool.connection() as conn:
+        with conn.cursor(row_factory=class_row(Document)) as cur:
+            cur.execute(
+                f"UPDATE document SET notes = %s WHERE id = %s RETURNING {_COLONNES_DOCUMENT}",
+                (notes, document_id),
+            )
+            conn.commit()
+            return cur.fetchone()
+
+
 def recuperer_genere(document_id: int) -> DocumentGenere | None:
     """Champs propres à un document généré (modèle, .typ fusionné) — voir
     app/blueprints/documents/routes.py::telecharger_typ."""
@@ -187,7 +209,9 @@ def marquer_piece(
 def lister_pour_dossier(dossier_id: int) -> list[DocumentListe]:
     """Tous les documents du dossier, tous types confondus, triés sur
     date_tri plutôt que sur cree_le (qui n'est que la date d'import) — voir
-    docs/phase-documents-correspondance.md §4."""
+    docs/phase-documents-correspondance.md §4. Alimente dossiers.chronologie,
+    qui n'a pas besoin des liens croisés Documents/Messagerie (§7.3) : les
+    champs correspondants sont laissés à leur valeur neutre."""
     with db.pool.connection() as conn:
         with conn.cursor(row_factory=class_row(DocumentListe)) as cur:
             cur.execute(
@@ -196,10 +220,108 @@ def lister_pour_dossier(dossier_id: int) -> list[DocumentListe]:
                     d.id, d.dossier_id, d.type_document, d.titre, d.chemin_fichier, d.cree_le,
                     COALESCE(de.date_message, dp.date_transmission::timestamptz, d.cree_le) AS date_tri,
                     (dp.document_id IS NOT NULL) AS est_piece,
-                    dp.numero_piece
+                    dp.numero_piece,
+                    d.notes,
+                    d.document_origine_id,
+                    NULL::timestamptz AS origine_date_message,
+                    NULL::text AS origine_expediteur,
+                    0 AS nb_versements
                 FROM document d
                 LEFT JOIN document_email de ON de.document_id = d.id
                 LEFT JOIN document_piece dp ON dp.document_id = d.id
+                WHERE d.dossier_id = %s
+                ORDER BY date_tri DESC
+                """,
+                (dossier_id,),
+            )
+            return cur.fetchall()
+
+
+def lister_documents_pour_dossier(dossier_id: int) -> list[DocumentListe]:
+    """Documents hors e-mails, pour l'onglet Documents de la fiche dossier
+    (§4, §7.1). Résout la provenance quand le document vient d'une pièce
+    jointe versée (document_origine_id → document_email), pour le lien
+    croisé vers Messagerie décrit en §7.3."""
+    with db.pool.connection() as conn:
+        with conn.cursor(row_factory=class_row(DocumentListe)) as cur:
+            cur.execute(
+                """
+                SELECT
+                    d.id, d.dossier_id, d.type_document, d.titre, d.chemin_fichier, d.cree_le,
+                    COALESCE(dp.date_transmission::timestamptz, d.cree_le) AS date_tri,
+                    (dp.document_id IS NOT NULL) AS est_piece,
+                    dp.numero_piece,
+                    d.notes,
+                    d.document_origine_id,
+                    origine.date_message AS origine_date_message,
+                    origine.expediteur AS origine_expediteur,
+                    0 AS nb_versements
+                FROM document d
+                LEFT JOIN document_piece dp ON dp.document_id = d.id
+                LEFT JOIN document_email origine ON origine.document_id = d.document_origine_id
+                WHERE d.dossier_id = %s AND d.type_document <> 'email'
+                ORDER BY date_tri DESC
+                """,
+                (dossier_id,),
+            )
+            return cur.fetchall()
+
+
+def lister_emails_pour_dossier(dossier_id: int) -> list[DocumentListe]:
+    """E-mails du dossier, pour l'onglet Messagerie de la fiche dossier (§4,
+    §7.1). nb_versements compte les documents dont document_origine_id
+    pointe vers cet e-mail, pour signaler qu'une pièce jointe a déjà été
+    versée (§7.3) et éviter un double versement."""
+    with db.pool.connection() as conn:
+        with conn.cursor(row_factory=class_row(DocumentListe)) as cur:
+            cur.execute(
+                """
+                SELECT
+                    d.id, d.dossier_id, d.type_document, d.titre, d.chemin_fichier, d.cree_le,
+                    de.date_message AS date_tri,
+                    (dp.document_id IS NOT NULL) AS est_piece,
+                    dp.numero_piece,
+                    d.notes,
+                    d.document_origine_id,
+                    NULL::timestamptz AS origine_date_message,
+                    NULL::text AS origine_expediteur,
+                    COALESCE(versements.nb, 0) AS nb_versements
+                FROM document d
+                JOIN document_email de ON de.document_id = d.id
+                LEFT JOIN document_piece dp ON dp.document_id = d.id
+                LEFT JOIN (
+                    SELECT document_origine_id, count(*) AS nb
+                    FROM document
+                    WHERE document_origine_id IS NOT NULL
+                    GROUP BY document_origine_id
+                ) versements ON versements.document_origine_id = d.id
+                WHERE d.dossier_id = %s
+                ORDER BY date_tri DESC
+                """,
+                (dossier_id,),
+            )
+            return cur.fetchall()
+
+
+def lister_pieces_pour_dossier(dossier_id: int) -> list[PieceListe]:
+    """Page Pièces (§7.2) : tous les documents marqués comme pièce, tous
+    types confondus (un e-mail produit comme pièce doit y figurer au même
+    titre qu'un document déposé)."""
+    with db.pool.connection() as conn:
+        with conn.cursor(row_factory=class_row(PieceListe)) as cur:
+            cur.execute(
+                f"""
+                SELECT
+                    d.id, d.dossier_id, d.type_document, d.titre, d.chemin_fichier,
+                    COALESCE(de.date_message, dp.date_transmission::timestamptz, d.cree_le) AS date_tri,
+                    dp.numero_piece, dp.contact_provenance_id,
+                    {_CTE_NOM_CONTACT} AS nom_contact_provenance,
+                    dp.date_transmission, dp.utilisee, d.notes
+                FROM document d
+                JOIN document_piece dp ON dp.document_id = d.id
+                LEFT JOIN document_email de ON de.document_id = d.id
+                LEFT JOIN personne_physique pp ON pp.contact_id = dp.contact_provenance_id
+                LEFT JOIN personne_morale pm ON pm.contact_id = dp.contact_provenance_id
                 WHERE d.dossier_id = %s
                 ORDER BY date_tri DESC
                 """,
@@ -219,8 +341,7 @@ def lister_recents(limite: int = 5) -> list[tuple[DocumentListe, str | None]]:
             cur.execute(
                 """
                 SELECT d.id, d.dossier_id, d.type_document, d.titre, d.chemin_fichier,
-                       d.cree_le, d.cree_le AS date_tri, false AS est_piece,
-                       NULL::text AS numero_piece, dos.reference
+                       d.cree_le, d.notes, dos.reference
                 FROM document d
                 JOIN dossier dos ON dos.id = d.dossier_id
                 WHERE d.type_document = 'genere'
@@ -229,7 +350,28 @@ def lister_recents(limite: int = 5) -> list[tuple[DocumentListe, str | None]]:
                 """,
                 (limite,),
             )
-            return [(DocumentListe(*ligne[0:9]), ligne[9]) for ligne in cur.fetchall()]
+            return [
+                (
+                    DocumentListe(
+                        id=ligne[0],
+                        dossier_id=ligne[1],
+                        type_document=ligne[2],
+                        titre=ligne[3],
+                        chemin_fichier=ligne[4],
+                        cree_le=ligne[5],
+                        date_tri=ligne[5],
+                        est_piece=False,
+                        numero_piece=None,
+                        notes=ligne[6],
+                        document_origine_id=None,
+                        origine_date_message=None,
+                        origine_expediteur=None,
+                        nb_versements=0,
+                    ),
+                    ligne[7],
+                )
+                for ligne in cur.fetchall()
+            ]
 
 
 def compter_ce_mois() -> int:

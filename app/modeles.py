@@ -275,6 +275,7 @@ class Document:
     document_origine_id: int | None
     cree_par: int | None
     cree_le: datetime
+    notes: str | None
 
 
 @dataclass
@@ -323,7 +324,13 @@ class DocumentListe:
     l'affichage, aplatis, plus date_tri — la date de référence pour le tri
     (date_message pour un e-mail, date_transmission pour une pièce quand
     elle est renseignée, cree_le sinon), calculée par la requête et jamais
-    stockée. Voir app/repositories/documents.py::lister_pour_dossier."""
+    stockée. Voir app/repositories/documents.py::lister_pour_dossier.
+
+    origine_date_message/origine_expediteur (renseignés par
+    lister_documents_pour_dossier) et nb_versements (renseigné par
+    lister_emails_pour_dossier) portent les liens croisés entre les onglets
+    Documents et Messagerie — voir docs/phase-documents-correspondance.md
+    §7.3. Absents (None/0) des autres fonctions de listage."""
 
     id: int
     dossier_id: int
@@ -334,6 +341,33 @@ class DocumentListe:
     date_tri: datetime
     est_piece: bool
     numero_piece: str | None
+    notes: str | None
+    document_origine_id: int | None
+    origine_date_message: datetime | None
+    origine_expediteur: str | None
+    nb_versements: int
+
+
+@dataclass
+class PieceListe:
+    """Vue composite d'un document marqué comme pièce, pour la page Pièces
+    (docs/phase-documents-correspondance.md §7.2) : tous types de document
+    confondus, avec le nom du contact de provenance déjà résolu. Distincte de
+    DocumentListe, dont l'usage (onglets Documents/Messagerie de la fiche
+    dossier) n'a pas besoin de ces champs."""
+
+    id: int
+    dossier_id: int
+    type_document: str
+    titre: str
+    chemin_fichier: str
+    date_tri: datetime
+    numero_piece: str | None
+    contact_provenance_id: int
+    nom_contact_provenance: str
+    date_transmission: date | None
+    utilisee: bool
+    notes: str | None
 
 
 @dataclass

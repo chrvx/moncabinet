@@ -3,7 +3,12 @@ from pathlib import Path
 from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, url_for
 from flask_login import current_user, login_required
 
-from app.blueprints.documents.forms import DeposerDocumentForm, MarquerPieceForm, construire_formulaire
+from app.blueprints.documents.forms import (
+    DeposerDocumentForm,
+    MarquerPieceForm,
+    ModifierDocumentForm,
+    construire_formulaire,
+)
 from app.repositories import documents as documents_repo
 from app.repositories import dossiers
 from app.services import generation_documents, modeles_documents, stockage_documents
@@ -79,6 +84,11 @@ def deposer(dossier_id):
 
     formulaire = DeposerDocumentForm()
     formulaire.contact_provenance_id.choices = _choix_contacts_dossier(dossier_id)
+    if request.method == "GET" and request.args.get("document_origine_id"):
+        formulaire.document_origine_id.data = request.args["document_origine_id"]
+    document_origine = None
+    if formulaire.document_origine_id.data:
+        document_origine = _document_ou_404(dossier_id, int(formulaire.document_origine_id.data))
 
     if formulaire.validate_on_submit():
         if formulaire.est_piece.data and not formulaire.contact_provenance_id.data:
@@ -92,6 +102,10 @@ def deposer(dossier_id):
                 titre=formulaire.titre.data,
                 chemin_fichier=chemin_fichier,
                 utilisateur_id=current_user.id,
+                document_origine_id=int(formulaire.document_origine_id.data)
+                if formulaire.document_origine_id.data
+                else None,
+                notes=formulaire.notes.data or None,
             )
             if formulaire.est_piece.data:
                 documents_repo.marquer_piece(
@@ -100,9 +114,14 @@ def deposer(dossier_id):
                     date_transmission=formulaire.date_transmission.data,
                 )
             flash(f"Document « {document.titre} » déposé.", "succes")
-            return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+            return redirect(url_for("dossiers.fiche", dossier_id=dossier_id, onglet="documents"))
 
-    return render_template("documents/deposer.html", dossier=dossier, formulaire=formulaire)
+    return render_template(
+        "documents/deposer.html",
+        dossier=dossier,
+        formulaire=formulaire,
+        document_origine=document_origine,
+    )
 
 
 @bp.route("/<int:document_id>/marquer-piece", methods=["GET", "POST"])
@@ -110,9 +129,10 @@ def deposer(dossier_id):
 def marquer_piece(dossier_id, document_id):
     dossier = _dossier_ou_404(dossier_id)
     document = _document_ou_404(dossier_id, document_id)
+    onglet = "messagerie" if document.type_document == "email" else "documents"
     if documents_repo.recuperer_piece(document_id) is not None:
         flash(f"« {document.titre} » est déjà marqué comme pièce.", "info")
-        return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+        return redirect(url_for("dossiers.fiche", dossier_id=dossier_id, onglet=onglet))
 
     formulaire = MarquerPieceForm()
     formulaire.contact_provenance_id.choices = _choix_contacts_dossier(dossier_id, avec_vide=False)
@@ -124,10 +144,28 @@ def marquer_piece(dossier_id, document_id):
             date_transmission=formulaire.date_transmission.data,
         )
         flash(f"Document « {document.titre} » marqué comme pièce.", "succes")
-        return redirect(url_for("dossiers.fiche", dossier_id=dossier_id))
+        return redirect(url_for("dossiers.fiche", dossier_id=dossier_id, onglet=onglet))
 
     return render_template(
         "documents/marquer_piece.html", dossier=dossier, document=document, formulaire=formulaire
+    )
+
+
+@bp.route("/<int:document_id>/modifier", methods=["GET", "POST"])
+@login_required
+def modifier(dossier_id, document_id):
+    dossier = _dossier_ou_404(dossier_id)
+    document = _document_ou_404(dossier_id, document_id)
+
+    formulaire = ModifierDocumentForm(obj=document)
+    if formulaire.validate_on_submit():
+        documents_repo.modifier_notes(document_id, formulaire.notes.data or None)
+        flash(f"Document « {document.titre} » modifié.", "succes")
+        onglet = "messagerie" if document.type_document == "email" else "documents"
+        return redirect(url_for("dossiers.fiche", dossier_id=dossier_id, onglet=onglet))
+
+    return render_template(
+        "documents/modifier.html", dossier=dossier, document=document, formulaire=formulaire
     )
 
 
